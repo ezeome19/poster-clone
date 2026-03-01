@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env*.local
+config/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build output
+dist/
+build/
+
+# Vite
+.vite/
+
+# Package manager locks (optional — remove if you want to track these)
+# package-lock.json
+
+# Secrets / keys
+*.pem
+*.key
+*.cert
+
+# MongoDB data
+data/db/
+seed.js
