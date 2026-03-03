@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import ProductDetail from './pages/ProductDetail'
 import AIEditor from './pages/AIEditor'
+import StockSearch from './pages/StockSearch'
 import CustomUpload from './pages/CustomUpload'
 import Checkout from './pages/Checkout'
 import Navbar from './components/layout/Navbar'
@@ -15,6 +16,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/ai" element={<AIEditor />} />
+                <Route path="/stock" element={<StockSearch />} />
                 <Route path="/custom" element={<CustomUpload />} />
                 <Route path="/checkout" element={<Checkout />} />
             </Routes>

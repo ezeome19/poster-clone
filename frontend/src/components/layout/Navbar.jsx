@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Search, User, Sparkles } from 'lucide-react';
+import { ShoppingCart, Search, User, Sparkles, Image } from 'lucide-react';
 
 const Navbar = () => {
     return (
@@ -12,11 +12,13 @@ const Navbar = () => {
 
                 <div className="hidden md:flex gap-8 items-center font-medium">
                     <Link to="/" className="hover:text-blue-600">Shop All</Link>
-                    <Link to="/custom" className="hover:text-blue-600">Custom Prints</Link>
-                    <Link to="/ai" className="flex items-center gap-1 text-purple-600 hover:text-purple-700 font-bold">
-                        <Sparkles size={18} />
-                        AI Generator
+                    <Link to="/ai" className="hover:text-purple-600 transition flex items-center gap-1">
+                        <Sparkles size={18} /> AI Designer
                     </Link>
+                    <Link to="/stock" className="hover:text-blue-600 transition flex items-center gap-1">
+                        <Image size={18} /> Stock Media
+                    </Link>
+                    <Link to="/custom" className="hover:text-blue-600 transition">Custom Prints</Link>
                 </div>
 
                 <div className="flex items-center gap-5">
