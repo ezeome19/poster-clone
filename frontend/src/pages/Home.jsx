@@ -17,7 +17,7 @@ const Home = () => {
         getProducts().then(res => setProducts(res.data));
     }, []);
 
-    const categories = ['All', 'Poster', 'Calendar', 'Frame', 'Custom', 'AI-Generated', 'E-Poster', 'E-Card', 'E-Calendar', 'E-Flyer', 'E-Menu'];
+    const categories = ['All', 'Poster', 'Calendar', 'Frame', 'Custom', 'AI-Generated', 'Art', 'Canvas', 'Accessory', 'E-Poster', 'E-Card', 'E-Calendar', 'E-Flyer', 'E-Menu'];
     const filteredProducts = category === 'All' ? products : products.filter(p => p.category === category);
 
     const breakpointColumnsObj = {
