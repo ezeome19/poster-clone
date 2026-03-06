@@ -1,124 +1,174 @@
-import React, { useState } from 'react';
-import api from '../api/api';
-import { Search, Download, Image as ImageIcon, Film, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { searchPexelsImages, searchUnsplash, searchShutterstock } from '../api/api';
+import { Search, Download, Image as ImageIcon, Loader2, ExternalLink } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const StockSearch = () => {
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState({ pexels: [], unsplash: [] });
+    const [searchTerm, setSearchTerm] = useState('');
+    const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [type, setType] = useState('images'); // 'images' or 'videos'
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
 
-    const handleSearch = async (e) => {
-        if (e) e.preventDefault();
-        if (!query) return toast.error('Please enter a search term');
+    const observer = useRef();
+    const lastElementRef = useCallback(node => {
+        if (loading) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                setPage(prevPage => prevPage + 1);
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [loading, hasMore]);
 
+    const fetchResults = async (searchQuery, pageNum, append = true) => {
         setLoading(true);
         try {
-            const [pexelsRes, unsplashRes] = await Promise.all([
-                api.get(`/stock/pexels/${type}`, { params: { query } }),
-                type === 'images' ? api.get('/stock/unsplash', { params: { query } }) : Promise.resolve({ data: { results: [] } })
+            const [pexelsRes, unsplashRes, shutterRes] = await Promise.all([
+                searchPexelsImages(searchQuery, pageNum),
+                searchUnsplash(searchQuery, pageNum),
+                searchShutterstock(searchQuery, pageNum)
             ]);
 
-            setResults({
-                pexels: pexelsRes.data.photos || pexelsRes.data.videos || [],
-                unsplash: unsplashRes.data.results || []
-            });
+            const newBatch = [
+                ...pexelsRes.data.results,
+                ...unsplashRes.data.results,
+                ...shutterRes.data.results
+            ];
+
+            // Shuffle slightly to mix sources better
+            const shuffled = newBatch.sort(() => Math.random() - 0.5);
+
+            setResults(prev => append ? [...prev, ...shuffled] : shuffled);
+
+            // If all 3 platforms return fewer than 5 results combined, we likely reached the end
+            if (newBatch.length < 10) {
+                setHasMore(false);
+            } else {
+                setHasMore(true);
+            }
         } catch (err) {
-            toast.error('Failed to fetch stock media');
+            toast.error('Failed to fetch more media');
+            console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
+    const handleInitialSearch = async (e) => {
+        if (e) e.preventDefault();
+        if (!query) return toast.error('Please enter a search term');
+
+        setResults([]);
+        setPage(1);
+        setSearchTerm(query);
+        await fetchResults(query, 1, false);
+    };
+
+    // Load next page when page state changes (from IntersectionObserver)
+    useEffect(() => {
+        if (page > 1 && searchTerm) {
+            fetchResults(searchTerm, page, true);
+        }
+    }, [page]);
+
     return (
         <div className="max-w-7xl mx-auto px-4 py-12">
             <Toaster />
             <div className="text-center mb-12">
-                <h1 className="text-4xl font-black mb-4">Stock Media Hub</h1>
-                <p className="text-gray-600">Download premium stock images and videos for your projects.</p>
+                <h1 className="text-5xl font-black mb-4 tracking-tight">Stock Media Hub</h1>
+                <p className="text-gray-500 text-lg">Bottomless search across Pexels, Unsplash, and Shutterstock.</p>
             </div>
 
-            <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-12 flex gap-4">
+            <form onSubmit={handleInitialSearch} className="max-w-3xl mx-auto mb-16 flex gap-3 p-2 bg-gray-50 rounded-3xl border border-gray-100">
                 <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
                     <input
                         type="text"
-                        placeholder="Search for anything..."
-                        className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-100 focus:border-black focus:outline-none text-lg"
+                        placeholder="Nature, Architecture, Abstract..."
+                        className="w-full bg-transparent pl-12 pr-4 py-4 focus:outline-none text-lg"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
                 </div>
                 <button
                     disabled={loading}
-                    className="bg-black text-white px-8 py-4 rounded-2xl font-bold hover:bg-gray-800 transition flex items-center gap-2"
+                    className="bg-black text-white px-10 py-4 rounded-2xl font-bold hover:bg-gray-800 transition-all flex items-center gap-2 shadow-xl shadow-black/10 active:scale-95"
                 >
-                    {loading ? <Loader2 className="animate-spin" size={20} /> : 'Search'}
+                    {loading && results.length === 0 ? <Loader2 className="animate-spin" size={20} /> : 'Search'}
                 </button>
             </form>
 
-            <div className="flex justify-center gap-4 mb-12">
-                <button
-                    onClick={() => setType('images')}
-                    className={`flex items-center gap-2 px-6 py-2 rounded-full border ${type === 'images' ? 'bg-black text-white' : 'bg-white text-black hover:bg-gray-100'}`}
-                >
-                    <ImageIcon size={18} /> Images
-                </button>
-                <button
-                    onClick={() => setType('videos')}
-                    className={`flex items-center gap-2 px-6 py-2 rounded-full border ${type === 'videos' ? 'bg-black text-white' : 'bg-white text-black hover:bg-gray-100'}`}
-                >
-                    <Film size={18} /> Videos
-                </button>
-            </div>
+            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
+                {results.map((item, index) => (
+                    <div
+                        key={`${item.id}-${index}`}
+                        ref={index === results.length - 1 ? lastElementRef : null}
+                        className="relative group rounded-2xl overflow-hidden break-inside-avoid shadow-sm hover:shadow-2xl transition-all duration-500 bg-gray-100"
+                    >
+                        <img
+                            src={item.preview}
+                            alt={`Stock result from ${item.source}`}
+                            className="w-full transform group-hover:scale-105 transition-transform duration-700"
+                            loading="lazy"
+                        />
 
-            <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6">
-                {/* Pexels Results */}
-                {results.pexels.map((item) => (
-                    <div key={item.id} className="relative group rounded-xl overflow-hidden break-inside-avoid shadow-lg">
-                        {type === 'images' ? (
-                            <img src={item.src.large} alt={item.alt} className="w-full" />
-                        ) : (
-                            <video src={item.video_files[0].link} className="w-full" muted loop onMouseOver={e => e.target.play()} onMouseOut={e => e.target.pause()} />
-                        )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                            <a
-                                href={type === 'images' ? item.src.original : item.video_files[0].link}
-                                download
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-full bg-white text-black py-2 rounded-lg font-bold flex items-center justify-center gap-2 text-sm"
-                            >
-                                <Download size={16} /> Download
-                            </a>
+                        {/* Source Badge */}
+                        <div className="absolute top-3 left-3 flex gap-2">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-md ${item.source === 'shutterstock' ? 'bg-red-500/80' :
+                                    item.source === 'pexels' ? 'bg-green-600/80' : 'bg-blue-600/80'
+                                }`}>
+                                {item.source}
+                            </span>
                         </div>
-                    </div>
-                ))}
 
-                {/* Unsplash Results */}
-                {type === 'images' && results.unsplash.map((item) => (
-                    <div key={item.id} className="relative group rounded-xl overflow-hidden break-inside-avoid shadow-lg">
-                        <img src={item.urls.regular} alt={item.alt_description} className="w-full" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                            <a
-                                href={item.urls.full}
-                                download
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-full bg-white text-black py-2 rounded-lg font-bold flex items-center justify-center gap-2 text-sm"
-                            >
-                                <Download size={16} /> Download
-                            </a>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
+                            <p className="text-white/70 text-xs mb-1 font-medium italic">by {item.creator}</p>
+                            <div className="flex gap-2">
+                                <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
+                                >
+                                    <Download size={16} /> View Image
+                                </a>
+                                <a
+                                    href={item.creator_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-12 bg-white/20 backdrop-blur-md text-white rounded-xl flex items-center justify-center hover:bg-white/30 transition-colors"
+                                >
+                                    <ExternalLink size={18} />
+                                </a>
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {!loading && results.pexels.length === 0 && results.unsplash.length === 0 && query && (
-                <div className="text-center py-24 text-gray-400">
-                    <ImageIcon size={64} className="mx-auto mb-4 opacity-20" />
-                    <p className="text-xl">No results found for "{query}"</p>
+            {loading && (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <Loader2 className="animate-spin text-black" size={40} />
+                    <p className="text-gray-400 font-medium animate-pulse">Summoning more media...</p>
+                </div>
+            )}
+
+            {!hasMore && results.length > 0 && (
+                <div className="text-center py-20 border-t border-gray-100 mt-20">
+                    <div className="bg-gray-50 inline-block px-8 py-3 rounded-full border border-gray-100">
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs italic">All relevant media has been exhausted</p>
+                    </div>
+                </div>
+            )}
+
+            {!loading && results.length === 0 && searchTerm && (
+                <div className="text-center py-40 bg-gray-50 rounded-[40px] border-2 border-dashed border-gray-100">
+                    <ImageIcon size={64} className="mx-auto mb-6 text-gray-200" />
+                    <p className="text-2xl font-bold text-gray-400">No results found for "{searchTerm}"</p>
+                    <p className="text-gray-300">Try a different or more broad keyword.</p>
                 </div>
             )}
         </div>

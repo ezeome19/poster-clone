@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import api from '../api/api';
-import { Wand2, Download, ShoppingCart, Sparkles, MessageSquare, ArrowRight, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { getWhisprFlow, getInterviewAgent, generateAI } from '../api/api';
+import { Wand2, ShoppingCart, Sparkles, MessageSquare, RefreshCw, Layers } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const AIEditor = () => {
@@ -9,6 +9,7 @@ const AIEditor = () => {
     const [expandedPrompt, setExpandedPrompt] = useState('');
     const [questions, setQuestions] = useState([]);
     const [answers, setAnswers] = useState({});
+    const [provider, setProvider] = useState('siliconflow');
     const [isProcessing, setIsProcessing] = useState(false);
     const [resultImage, setResultImage] = useState(null);
 
@@ -16,11 +17,11 @@ const AIEditor = () => {
         if (!prompt) return toast.error('Please enter a prompt');
         setIsProcessing(true);
         try {
-            const res = await api.post('/ai/whispr-flow', { prompt });
+            const res = await getWhisprFlow(prompt);
             setExpandedPrompt(res.data.expandedPrompt);
             setStep(2);
         } catch (err) {
-            toast.error('Whispr Flow failed. Please try again.');
+            toast.error('AI Expansion failed. Please try again.');
         } finally {
             setIsProcessing(false);
         }
@@ -29,7 +30,7 @@ const AIEditor = () => {
     const handleStartInterview = async () => {
         setIsProcessing(true);
         try {
-            const res = await api.post('/ai/interview-agent', { expandedPrompt });
+            const res = await getInterviewAgent(expandedPrompt);
             setQuestions(res.data.questions);
             setStep(3);
         } catch (err) {
@@ -42,15 +43,12 @@ const AIEditor = () => {
     const handleGenerate = async () => {
         setIsProcessing(true);
         try {
-            const res = await api.post('/ai/generate', {
-                prompt: expandedPrompt,
-                answers: Object.values(answers)
-            });
+            const res = await generateAI(expandedPrompt, Object.values(answers), provider);
             setResultImage(res.data.imageUrl);
             setStep(4);
             toast.success('Artwork generated successfully!');
         } catch (err) {
-            toast.error('Generation failed.');
+            toast.error('Generation failed. Check your API keys and balance.');
         } finally {
             setIsProcessing(false);
         }
@@ -75,7 +73,7 @@ const AIEditor = () => {
                             onClick={handleWhisprFlow}
                             className="w-full mt-8 py-5 rounded-[1.5rem] bg-black text-white font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all duration-500 flex items-center justify-center gap-3 group"
                         >
-                            {isProcessing ? <RefreshCw className="animate-spin" /> : <><Sparkles size={18} className="group-hover:rotate-12 transition-transform" /> Initialize Expansion</>}
+                            {isProcessing ? <RefreshCw className="animate-spin" /> : <><Sparkles size={18} className="group-hover:rotate-12 transition-transform" /> Initialize AI Expansion</>}
                         </button>
                     </div>
                 );
@@ -84,39 +82,62 @@ const AIEditor = () => {
                     <div className="bg-white/80 backdrop-blur-2xl p-12 rounded-[2.5rem] border border-white/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-right-8 duration-1000">
                         <label className="block font-black text-xs uppercase tracking-[0.3em] mb-4 text-purple-600">Phase 02 — Intelligence</label>
                         <h2 className="text-4xl font-black mb-6 tracking-tighter leading-none">Refining the<br />Conceptual Core.</h2>
-                        <div className="bg-gray-50/50 p-8 rounded-3xl border border-black/5 italic text-gray-500 text-lg leading-relaxed mb-10">
+                        <div className="bg-gray-50/50 p-8 rounded-3xl border border-black/5 italic text-gray-700 text-lg leading-relaxed mb-10 shadow-inner">
                             "{expandedPrompt}"
                         </div>
                         <button
                             onClick={handleStartInterview}
-                            className="w-full py-5 rounded-[1.5rem] bg-purple-600 text-white font-black uppercase tracking-widest text-xs hover:bg-black transition-all duration-500 flex items-center justify-center gap-3"
+                            className="w-full py-5 rounded-[1.5rem] bg-purple-600 text-white font-black uppercase tracking-widest text-xs hover:bg-black transition-all duration-500 flex items-center justify-center gap-3 shadow-lg shadow-purple-200"
                         >
-                            <MessageSquare size={18} /> Deep-Dive Analysis
+                            {isProcessing ? <RefreshCw className="animate-spin" /> : <><MessageSquare size={18} /> Deep-Dive Analysis</>}
                         </button>
                     </div>
                 );
             case 3:
                 return (
                     <div className="bg-white/80 backdrop-blur-2xl p-12 rounded-[2.5rem] border border-white/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-right-8 duration-1000">
-                        <label className="block font-black text-xs uppercase tracking-[0.3em] mb-4 text-emerald-600">Phase 03 — Nuance</label>
-                        <h2 className="text-4xl font-black mb-8 tracking-tighter leading-none">The Technical<br />Specifications.</h2>
-                        <div className="space-y-10">
+                        <label className="block font-black text-xs uppercase tracking-[0.3em] mb-4 text-emerald-600">Phase 03 — Technicals & Provider</label>
+                        <h2 className="text-4xl font-black mb-8 tracking-tighter leading-none">The Final<br />Specifications.</h2>
+
+                        <div className="space-y-8 mb-12">
                             {questions.map((q, i) => (
                                 <div key={i} className="group">
-                                    <p className="font-bold text-gray-400 text-xs uppercase tracking-widest mb-3 group-focus-within:text-emerald-600 transition-colors">{q}</p>
+                                    <p className="font-bold text-gray-400 text-[10px] uppercase tracking-widest mb-3 group-focus-within:text-emerald-600 transition-colors">{q}</p>
                                     <input
                                         type="text"
-                                        className="w-full bg-transparent border-b-2 border-gray-100 focus:border-emerald-500 focus:outline-none py-3 text-xl transition-colors"
-                                        placeholder="Define attribute..."
+                                        className="w-full bg-transparent border-b-2 border-gray-100 focus:border-emerald-500 focus:outline-none py-2 text-lg transition-colors"
+                                        placeholder="Type your preference..."
                                         onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
                                     />
                                 </div>
                             ))}
                         </div>
+
+                        {/* Provider Selection */}
+                        <div className="mb-12">
+                            <p className="font-bold text-gray-400 text-[10px] uppercase tracking-widest mb-4">Select AI Generation Engine</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setProvider('siliconflow')}
+                                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col gap-2 ${provider === 'siliconflow' ? 'border-emerald-500 bg-emerald-50/50' : 'border-gray-100 hover:border-gray-200'}`}
+                                >
+                                    <span className="font-black text-sm">SiliconFlow</span>
+                                    <span className="text-[10px] text-gray-400">FLUX.1 [Schnell] (Hyper-fast)</span>
+                                </button>
+                                <button
+                                    onClick={() => setProvider('shutterstock')}
+                                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col gap-2 ${provider === 'shutterstock' ? 'border-emerald-500 bg-emerald-50/50' : 'border-gray-100 hover:border-gray-200'}`}
+                                >
+                                    <span className="font-black text-sm">Shutterstock</span>
+                                    <span className="text-[10px] text-gray-400">Commercial Grade AI</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <button
                             disabled={isProcessing}
                             onClick={handleGenerate}
-                            className="w-full mt-12 py-5 rounded-[1.5rem] bg-emerald-600 text-white font-black uppercase tracking-widest text-xs hover:bg-black transition-all duration-500 flex items-center justify-center gap-3"
+                            className="w-full py-5 rounded-[1.5rem] bg-emerald-600 text-white font-black uppercase tracking-widest text-xs hover:bg-black transition-all duration-500 flex items-center justify-center gap-3 shadow-lg shadow-emerald-200"
                         >
                             {isProcessing ? <RefreshCw className="animate-spin" /> : <><Wand2 size={18} /> Manifest Artwork</>}
                         </button>
@@ -125,21 +146,27 @@ const AIEditor = () => {
             case 4:
                 return (
                     <div className="bg-white/80 backdrop-blur-2xl p-6 rounded-[3rem] border border-white/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-1000">
-                        <div className="aspect-[3/4] rounded-[2.5rem] overflow-hidden mb-8 shadow-2xl relative group">
-                            <img src={resultImage} alt="Final AI Artwork" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center backdrop-blur-sm">
-                                <button className="bg-white text-black px-8 py-3 rounded-full font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform">View Details</button>
+                        <div className="aspect-square rounded-[2.5rem] overflow-hidden mb-8 shadow-2xl relative group bg-gray-100">
+                            {resultImage ? (
+                                <img src={resultImage} alt="Final AI Artwork" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center"><Loader2 className="animate-spin text-gray-300" size={40} /></div>
+                            )}
+                            <div className="absolute top-6 left-6 flex gap-2">
+                                <span className="bg-black/80 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <Layers size={12} /> Generated by {provider.toUpperCase()}
+                                </span>
                             </div>
                         </div>
-                        <div className="px-6 pb-6">
+                        <div className="px-6 pb-6 text-center">
                             <h2 className="text-3xl font-black mb-8 tracking-tighter">Your Manifestation is Ready.</h2>
                             <div className="flex gap-4">
-                                <button className="flex-2 bg-black text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-colors flex items-center justify-center gap-3">
+                                <button className="flex-[2] bg-black text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-colors flex items-center justify-center gap-3 shadow-xl">
                                     <ShoppingCart size={18} /> Acquire Print
                                 </button>
                                 <button
                                     onClick={() => setStep(1)}
-                                    className="flex-1 py-5 rounded-[1.5rem] border-2 border-gray-100 font-black uppercase tracking-widest text-xs hover:bg-gray-50 transition-colors"
+                                    className="flex-1 py-5 rounded-[2rem] border-2 border-gray-100 font-black uppercase tracking-widest text-xs hover:bg-gray-50 transition-colors"
                                 >
                                     Reset
                                 </button>
