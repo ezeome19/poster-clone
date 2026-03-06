@@ -105,7 +105,6 @@ const StockSearch = () => {
                 {results.map((item, index) => (
                     <div
                         key={`${item.id}-${index}`}
-                        ref={index === results.length - 1 ? lastElementRef : null}
                         className="relative group rounded-2xl overflow-hidden break-inside-avoid shadow-sm hover:shadow-2xl transition-all duration-500 bg-gray-100"
                     >
                         <img
@@ -118,7 +117,7 @@ const StockSearch = () => {
                         {/* Source Badge */}
                         <div className="absolute top-3 left-3 flex gap-2">
                             <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-md ${item.source === 'shutterstock' ? 'bg-red-500/80' :
-                                    item.source === 'pexels' ? 'bg-green-600/80' : 'bg-blue-600/80'
+                                item.source === 'pexels' ? 'bg-green-600/80' : 'bg-blue-600/80'
                                 }`}>
                                 {item.source}
                             </span>
@@ -149,12 +148,15 @@ const StockSearch = () => {
                 ))}
             </div>
 
-            {loading && (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                    <Loader2 className="animate-spin text-black" size={40} />
-                    <p className="text-gray-400 font-medium animate-pulse">Summoning more media...</p>
-                </div>
-            )}
+            {/* Infinite Scroll Sentinel */}
+            <div ref={lastElementRef} className="h-20 w-full flex items-center justify-center">
+                {loading && (
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="animate-spin text-black" size={40} />
+                        <p className="text-gray-400 font-medium animate-pulse">Summoning more media...</p>
+                    </div>
+                )}
+            </div>
 
             {!hasMore && results.length > 0 && (
                 <div className="text-center py-20 border-t border-gray-100 mt-20">

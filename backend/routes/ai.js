@@ -12,7 +12,7 @@ async function siliconFlowChat(messages, model = 'Qwen/Qwen2.5-72B-Instruct') {
             max_tokens: 500
         }, {
             headers: {
-                'Authorization': `Bearer ${process.env.SILICONFLOW_API_KEY}`,
+                'Authorization': `Bearer ${process.env.SILICONFLOW_API_KEY?.trim()}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -86,7 +86,7 @@ router.post('/generate', async (req, res) => {
                 batch_size: 1
             }, {
                 headers: {
-                    'Authorization': `Bearer ${process.env.SILICONFLOW_API_KEY}`,
+                    'Authorization': `Bearer ${process.env.SILICONFLOW_API_KEY?.trim()}`,
                     'Content-Type': 'application/json'
                 }
             });
