@@ -4,6 +4,15 @@ const axios = require('axios');
 
 // Helper for SiliconFlow LLM (Prompt Expansion & Interview Questions)
 async function siliconFlowChat(messages, model = 'Qwen/Qwen2.5-72B-Instruct') {
+    const rawKey = process.env.SILICONFLOW_API_KEY?.trim();
+
+    // Diagnostic logging (Safe: only shows length and first/last chars)
+    if (!rawKey) {
+        console.error('SILICONFLOW_API_KEY is missing from environment variables');
+    } else {
+        console.log(`Key diagnostic: Length=${rawKey.length}, StartsWith=${rawKey.substring(0, 4)}..., EndsWith=...${rawKey.substring(rawKey.length - 4)}`);
+    }
+
     try {
         const response = await axios.post('https://api.siliconflow.cn/v1/chat/completions', {
             model,
@@ -12,7 +21,7 @@ async function siliconFlowChat(messages, model = 'Qwen/Qwen2.5-72B-Instruct') {
             max_tokens: 500
         }, {
             headers: {
-                'Authorization': `Bearer ${process.env.SILICONFLOW_API_KEY?.trim()}`,
+                'Authorization': `Bearer ${rawKey}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -80,6 +89,10 @@ router.post('/generate', async (req, res) => {
         let imageUrl = '';
 
         if (provider === 'siliconflow') {
+            const rawKey = process.env.SILICONFLOW_API_KEY?.trim();
+            if (!rawKey) console.error('SILICONFLOW_API_KEY is missing for image generation');
+            else console.log(`Generation Key diagnostic: Length=${rawKey.length}, StartsWith=${rawKey.substring(0, 4)}...`);
+
             const response = await axios.post('https://api.siliconflow.cn/v1/images/generations', {
                 model: 'black-forest-labs/FLUX.1-schnell',
                 prompt: finalPrompt,
@@ -87,7 +100,7 @@ router.post('/generate', async (req, res) => {
                 batch_size: 1
             }, {
                 headers: {
-                    'Authorization': `Bearer ${process.env.SILICONFLOW_API_KEY?.trim()}`,
+                    'Authorization': `Bearer ${rawKey}`,
                     'Content-Type': 'application/json'
                 }
             });
