@@ -142,12 +142,12 @@ const StockSearch = () => {
                             </span>
                         </div>
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
+                        <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
                             <p className="text-white/70 text-xs mb-1 font-medium italic">by {item.creator}</p>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => handleDownload(item.url, item.source, item.id)}
-                                    className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
+                                    className="flex-1 bg-white text-black py-3 rounded-xl font-black flex items-center justify-center gap-2 text-sm hover:bg-blue-600 hover:text-white transition-all shadow-xl"
                                 >
                                     <Download size={16} /> Download
                                 </button>
@@ -155,12 +155,21 @@ const StockSearch = () => {
                                     href={item.creator_url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="w-12 bg-white/20 backdrop-blur-md text-white rounded-xl flex items-center justify-center hover:bg-white/30 transition-colors"
+                                    className="w-12 bg-white/10 backdrop-blur-md text-white rounded-xl flex items-center justify-center hover:bg-white/30 transition-colors border border-white/20"
                                 >
                                     <ExternalLink size={18} />
                                 </a>
                             </div>
                         </div>
+
+                        {/* Top-right Floating Download Button (Circular) */}
+                        <button
+                            onClick={() => handleDownload(item.url, item.source, item.id)}
+                            className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-black opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-2xl scale-75 group-hover:scale-100 hover:bg-blue-600 hover:text-white z-10"
+                            title="Download Image"
+                        >
+                            <Download size={20} />
+                        </button>
                     </div>
                 ))}
             </div>
