@@ -19,6 +19,25 @@ const Checkout = () => {
     const cart = [{ product: '65d4...', quantity: 1, priceAtPurchase: 5000 }];
     const total = 5000;
 
+    const config = {
+        public_key: 'FLWPUBK_TEST-CHANGEME', // Replace with real key
+        tx_ref: Date.now().toString(), // Temporary tx_ref for initialization
+        amount: total + 1000,
+        currency: 'NGN',
+        payment_options: 'card,mobilemoney,ussd',
+        customer: {
+            email: form.email,
+            phone_number: form.phone,
+            name: form.fullName,
+        },
+        customizations: {
+            title: 'Poster Clone',
+            description: 'Payment for posters',
+        },
+    };
+
+    const handleFlutterPayment = useFlutterwave(config);
+
     const handlePlaceOrder = async () => {
         if (!form.email || !form.fullName) return toast.error('Please fill required fields');
 
@@ -32,25 +51,6 @@ const Checkout = () => {
             });
 
             if (form.paymentMethod === 'card') {
-                const config = {
-                    public_key: 'FLWPUBK_TEST-CHANGEME', // Replace with real key
-                    tx_ref: res.data.tx_ref,
-                    amount: res.data.amount,
-                    currency: 'NGN',
-                    payment_options: 'card,mobilemoney,ussd',
-                    customer: {
-                        email: form.email,
-                        phone_number: form.phone,
-                        name: form.fullName,
-                    },
-                    customizations: {
-                        title: 'Poster Clone',
-                        description: 'Payment for posters',
-                    },
-                };
-
-                const handleFlutterPayment = useFlutterwave(config);
-
                 handleFlutterPayment({
                     callback: async (response) => {
                         closePaymentModal();

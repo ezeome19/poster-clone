@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProduct } from '../api/api';
+import { getProductById } from '../api/api';
 import { Check } from 'lucide-react';
 
 const ProductDetail = () => {
@@ -11,7 +11,7 @@ const ProductDetail = () => {
     const [selectedFrame, setSelectedFrame] = useState('None');
 
     useEffect(() => {
-        getProduct(id).then(res => setProduct(res.data));
+        getProductById(id).then(res => setProduct(res.data));
     }, [id]);
 
     if (!product) return <div className="p-8 text-center">Loading...</div>;
