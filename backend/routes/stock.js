@@ -20,6 +20,8 @@ router.get('/pexels/images', async (req, res) => {
             id: photo.id,
             url: photo.src.large,
             preview: photo.src.medium,
+            // Backward Compatibility
+            src: photo.src,
             source: 'pexels',
             creator: photo.photographer,
             creator_url: photo.photographer_url
@@ -27,6 +29,7 @@ router.get('/pexels/images', async (req, res) => {
 
         res.send({
             results,
+            photos: results, // Alias for legacy frontend
             total_count: response.data.total_results,
             page: parseInt(page),
             per_page: parseInt(per_page)
@@ -50,6 +53,8 @@ router.get('/unsplash', async (req, res) => {
             id: photo.id,
             url: photo.urls.regular,
             preview: photo.urls.small,
+            // Backward Compatibility
+            urls: photo.urls,
             source: 'unsplash',
             creator: photo.user.name,
             creator_url: photo.user.links.html
@@ -57,7 +62,7 @@ router.get('/unsplash', async (req, res) => {
 
         res.send({
             results,
-            total_count: response.data.total,
+            total: response.data.total, // Alias for legacy frontend
             page: parseInt(page),
             per_page: parseInt(per_page)
         });
