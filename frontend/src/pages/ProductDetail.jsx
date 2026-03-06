@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProduct } from '../api/api';
-import { ChevronRight, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 const ProductDetail = () => {
     const { id } = useParams();

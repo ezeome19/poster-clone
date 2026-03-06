@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { getWhisprFlow, getInterviewAgent, generateAI } from '../api/api';
-import { Wand2, ShoppingCart, Sparkles, MessageSquare, RefreshCw, Layers } from 'lucide-react';
+import { Wand2, ShoppingCart, Sparkles, MessageSquare, RefreshCw, Layers, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const AIEditor = () => {
