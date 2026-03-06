@@ -15,7 +15,6 @@ export const generateAI = (prompt, answers, provider) => api.post('/ai/generate'
 // Stock Media Search
 export const searchPexelsImages = (query, page) => api.get('/stock/pexels/images', { params: { query, page } });
 export const searchUnsplash = (query, page) => api.get('/stock/unsplash', { params: { query, page } });
-export const searchShutterstock = (query, page) => api.get('/stock/shutterstock', { params: { query, page } });
 
 // Orders & Checkout
 export const createOrder = (orderData) => api.post('/orders', orderData);

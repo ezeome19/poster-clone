@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { searchPexelsImages, searchUnsplash, searchShutterstock } from '../api/api';
+import { searchPexelsImages, searchUnsplash } from '../api/api';
 import { Search, Download, Image as ImageIcon, Loader2, ExternalLink } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -23,19 +23,39 @@ const StockSearch = () => {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
+    const handleDownload = async (imageUrl, source, id) => {
+        const toastId = toast.loading(`Preparing ${source} download...`);
+        try {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${source}-photo-${id}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast.success('Download started!', { id: toastId });
+        } catch (error) {
+            console.error('Download failed:', error);
+            // Fallback: Open in new tab
+            window.open(imageUrl, '_blank');
+            toast.error('Direct download failed, opening in new tab', { id: toastId });
+        }
+    };
+
     const fetchResults = async (searchQuery, pageNum, append = true) => {
         setLoading(true);
         try {
-            const [pexelsRes, unsplashRes, shutterRes] = await Promise.all([
+            const [pexelsRes, unsplashRes] = await Promise.all([
                 searchPexelsImages(searchQuery, pageNum),
-                searchUnsplash(searchQuery, pageNum),
-                searchShutterstock(searchQuery, pageNum)
+                searchUnsplash(searchQuery, pageNum)
             ]);
 
             const newBatch = [
                 ...pexelsRes.data.results,
-                ...unsplashRes.data.results,
-                ...shutterRes.data.results
+                ...unsplashRes.data.results
             ];
 
             // Shuffle slightly to mix sources better
@@ -43,8 +63,8 @@ const StockSearch = () => {
 
             setResults(prev => append ? [...prev, ...shuffled] : shuffled);
 
-            // If all 3 platforms return fewer than 5 results combined, we likely reached the end
-            if (newBatch.length < 10) {
+            // If combined results are low, we likely reached the end
+            if (newBatch.length < 8) {
                 setHasMore(false);
             } else {
                 setHasMore(true);
@@ -79,7 +99,7 @@ const StockSearch = () => {
             <Toaster />
             <div className="text-center mb-12">
                 <h1 className="text-5xl font-black mb-4 tracking-tight">Stock Media Hub</h1>
-                <p className="text-gray-500 text-lg">Bottomless search across Pexels, Unsplash, and Shutterstock.</p>
+                <p className="text-gray-500 text-lg">High-resolution assets from Pexels and Unsplash.</p>
             </div>
 
             <form onSubmit={handleInitialSearch} className="max-w-3xl mx-auto mb-16 flex gap-3 p-2 bg-gray-50 rounded-3xl border border-gray-100">
@@ -116,8 +136,7 @@ const StockSearch = () => {
 
                         {/* Source Badge */}
                         <div className="absolute top-3 left-3 flex gap-2">
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-md ${item.source === 'shutterstock' ? 'bg-red-500/80' :
-                                item.source === 'pexels' ? 'bg-green-600/80' : 'bg-blue-600/80'
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-md ${item.source === 'pexels' ? 'bg-green-600/80' : 'bg-blue-600/80'
                                 }`}>
                                 {item.source}
                             </span>
@@ -126,14 +145,12 @@ const StockSearch = () => {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
                             <p className="text-white/70 text-xs mb-1 font-medium italic">by {item.creator}</p>
                             <div className="flex gap-2">
-                                <a
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                <button
+                                    onClick={() => handleDownload(item.url, item.source, item.id)}
                                     className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
                                 >
-                                    <Download size={16} /> View Image
-                                </a>
+                                    <Download size={16} /> Download
+                                </button>
                                 <a
                                     href={item.creator_url}
                                     target="_blank"

@@ -5,32 +5,41 @@ const axios = require('axios');
 // Helper for SiliconFlow LLM (Prompt Expansion & Interview Questions)
 async function siliconFlowChat(messages, model = 'Qwen/Qwen2.5-72B-Instruct') {
     const rawKey = process.env.SILICONFLOW_API_KEY?.trim();
+    if (!rawKey) throw new Error('SILICONFLOW_API_KEY is missing');
 
-    // Diagnostic logging (Safe: only shows length and first/last chars)
-    if (!rawKey) {
-        console.error('SILICONFLOW_API_KEY is missing from environment variables');
-    } else {
-        console.log(`Key diagnostic: Length=${rawKey.length}, StartsWith=${rawKey.substring(0, 4)}..., EndsWith=...${rawKey.substring(rawKey.length - 4)}`);
+    const domains = ['api.siliconflow.cn', 'api.siliconflow.com'];
+    let lastError = null;
+
+    for (const domain of domains) {
+        try {
+            console.log(`Attempting SiliconFlow request via ${domain}...`);
+            const response = await axios.post(`https://${domain}/v1/chat/completions`, {
+                model,
+                messages,
+                temperature: 0.7,
+                max_tokens: 500
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${rawKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            return response.data.choices[0].message.content;
+        } catch (error) {
+            lastError = error;
+            const status = error.response?.status;
+            const errorData = error.response?.data;
+
+            console.error(`SiliconFlow Error (${domain}):`, JSON.stringify(errorData || error.message, null, 2));
+
+            // If it's not a 401/403 (auth error), don't bother trying the other domain if it's a 4xx client error
+            // But if it's a 401, the key might be for the other region.
+            if (status !== 401 && status !== 403) break;
+        }
     }
 
-    try {
-        const response = await axios.post('https://api.siliconflow.cn/v1/chat/completions', {
-            model,
-            messages,
-            temperature: 0.7,
-            max_tokens: 500
-        }, {
-            headers: {
-                'Authorization': `Bearer ${rawKey}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        return response.data.choices[0].message.content;
-    } catch (error) {
-        const errorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
-        console.error('SiliconFlow Chat Error Details:', JSON.stringify(error.response?.data || {}, null, 2));
-        throw new Error(`SiliconFlow AI Error: ${errorMsg}`);
-    }
+    const finalErrorMsg = lastError.response?.data?.message || lastError.response?.data?.error?.message || lastError.message;
+    throw new Error(`SiliconFlow AI Error: ${finalErrorMsg}`);
 }
 
 // Whispr Flow: Expands basic prompt
@@ -90,21 +99,37 @@ router.post('/generate', async (req, res) => {
 
         if (provider === 'siliconflow') {
             const rawKey = process.env.SILICONFLOW_API_KEY?.trim();
-            if (!rawKey) console.error('SILICONFLOW_API_KEY is missing for image generation');
-            else console.log(`Generation Key diagnostic: Length=${rawKey.length}, StartsWith=${rawKey.substring(0, 4)}...`);
+            if (!rawKey) throw new Error('SILICONFLOW_API_KEY is missing');
 
-            const response = await axios.post('https://api.siliconflow.cn/v1/images/generations', {
-                model: 'black-forest-labs/FLUX.1-schnell',
-                prompt: finalPrompt,
-                image_size: '1024x1024',
-                batch_size: 1
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${rawKey}`,
-                    'Content-Type': 'application/json'
+            const domains = ['api.siliconflow.cn', 'api.siliconflow.com'];
+            let lastError = null;
+
+            for (const domain of domains) {
+                try {
+                    console.log(`Attempting SiliconFlow Generation via ${domain}...`);
+                    const response = await axios.post(`https://${domain}/v1/images/generations`, {
+                        model: 'black-forest-labs/FLUX.1-schnell',
+                        prompt: finalPrompt,
+                        image_size: '1024x1024',
+                        batch_size: 1
+                    }, {
+                        headers: {
+                            'Authorization': `Bearer ${rawKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    imageUrl = response.data.images[0].url;
+                    break; // Success!
+                } catch (error) {
+                    lastError = error;
+                    if (error.response?.status !== 401 && error.response?.status !== 403) break;
                 }
-            });
-            imageUrl = response.data.images[0].url;
+            }
+
+            if (!imageUrl && lastError) {
+                const errorMsg = lastError.response?.data?.message || lastError.response?.data?.error?.message || lastError.message;
+                throw new Error(`SiliconFlow Generation Error: ${errorMsg}`);
+            }
         }
         else if (provider === 'shutterstock') {
             const response = await axios.post('https://api.shutterstock.com/v2/ai/images/generations', {

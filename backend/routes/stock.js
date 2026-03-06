@@ -71,35 +71,4 @@ router.get('/unsplash', async (req, res) => {
     }
 });
 
-// Search Shutterstock
-router.get('/shutterstock', async (req, res) => {
-    try {
-        const { query, page = 1, per_page = 20 } = req.query;
-        const response = await axios.get(`${SHUTTERSTOCK_URL}/images/search`, {
-            params: { query, page, per_page },
-            headers: { Authorization: `Bearer ${process.env.SHUTTERSTOCK_TOKEN}` }
-        });
-
-        // Normalize results
-        const results = response.data.data.map(img => ({
-            id: img.id,
-            url: img.assets.preview.url, // Usually Shutterstock previews are usable
-            preview: img.assets.huge_thumb?.url || img.assets.preview.url,
-            source: 'shutterstock',
-            creator: img.contributor?.id || 'Shutterstock',
-            creator_url: `https://www.shutterstock.com/g/${img.contributor?.id}`
-        }));
-
-        res.send({
-            results,
-            total_count: response.data.total_count,
-            page: parseInt(page),
-            per_page: parseInt(per_page)
-        });
-    } catch (error) {
-        console.error('Shutterstock Error:', error.response?.data || error.message);
-        res.status(error.response?.status || 500).send(error.response?.data || error.message);
-    }
-});
-
 module.exports = router;
