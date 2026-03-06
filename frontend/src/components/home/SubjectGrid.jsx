@@ -18,7 +18,10 @@ const SubjectGrid = () => {
                     <h2 className="text-4xl font-black mb-4 tracking-tight">Shop by Subject</h2>
                     <p className="text-gray-500 text-lg">Curated collections for every artistic taste and interior style.</p>
                 </div>
-                <button className="text-blue-600 font-bold flex items-center gap-1 hover:gap-2 transition-all mx-auto md:mx-0">
+                <button
+                    onClick={() => document.getElementById('curated-collection')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="text-blue-600 font-bold flex items-center gap-1 hover:gap-2 transition-all mx-auto md:mx-0 active:scale-95"
+                >
                     View All Categories <ChevronRight size={20} />
                 </button>
             </div>

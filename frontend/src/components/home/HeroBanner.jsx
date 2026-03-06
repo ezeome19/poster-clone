@@ -1,7 +1,15 @@
 import React from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const HeroBanner = () => {
+    const scrollToCollection = () => {
+        const element = document.getElementById('curated-collection');
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
     return (
         <section className="relative h-[600px] flex items-center overflow-hidden bg-slate-900 rounded-3xl mx-4 my-8">
             {/* Background Gradient & Effects */}
@@ -25,13 +33,19 @@ const HeroBanner = () => {
                     </p>
 
                     <div className="flex flex-wrap gap-4">
-                        <button className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all flex items-center gap-2 group shadow-lg shadow-white/5">
+                        <button
+                            onClick={scrollToCollection}
+                            className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all flex items-center gap-2 group shadow-lg shadow-white/5 active:scale-95"
+                        >
                             Shop Collection
                             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                         </button>
-                        <button className="px-8 py-4 bg-white/5 backdrop-blur-md border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all">
+                        <Link
+                            to="/ai"
+                            className="px-8 py-4 bg-white/5 backdrop-blur-md border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all active:scale-95"
+                        >
                             Try AI Designer
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>

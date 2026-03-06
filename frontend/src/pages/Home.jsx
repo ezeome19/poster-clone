@@ -34,7 +34,7 @@ const Home = () => {
             <SubjectGrid />
             <TrendingCarousel products={products} />
 
-            <main className="max-w-7xl mx-auto px-4 py-32">
+            <main id="curated-collection" className="max-w-7xl mx-auto px-4 py-32">
                 <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
                     <div className="max-w-xl">
                         <h2 className="text-6xl font-black uppercase tracking-tighter leading-[0.9] mb-6">
