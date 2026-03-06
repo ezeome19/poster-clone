@@ -18,8 +18,9 @@ async function siliconFlowChat(messages, model = 'Qwen/Qwen2.5-72B-Instruct') {
         });
         return response.data.choices[0].message.content;
     } catch (error) {
-        console.error('SiliconFlow Chat Error:', error.response?.data || error.message);
-        throw new Error('Failed to reach AI Chat service');
+        const errorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
+        console.error('SiliconFlow Chat Error Details:', JSON.stringify(error.response?.data || {}, null, 2));
+        throw new Error(`SiliconFlow AI Error: ${errorMsg}`);
     }
 }
 
