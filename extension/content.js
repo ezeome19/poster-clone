@@ -7,7 +7,7 @@
  * the PosterClone app.
  */
 
-const POSTER_CLONE_URL = 'http://localhost:5173'; // Change to your deployed URL in production
+const POSTER_CLONE_URL = 'https://poster-clone.onrender.com'; // Change to your deployed URL in production
 
 // ─── Pinterest image URL helpers ─────────────────────────────────────────────
 function getPinterestHighRes(src) {

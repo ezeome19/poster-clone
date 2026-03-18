@@ -4,7 +4,7 @@
  * with the URL as a query parameter.
  */
 
-const POSTER_CLONE_URL = 'http://localhost:5173'; // Change to your deployed URL in production
+const POSTER_CLONE_URL = 'https://poster-clone.onrender.com'; // Change to your deployed URL in production
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'OPEN_IN_POSTERCLONE' && message.imageUrl) {
