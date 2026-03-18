@@ -8,6 +8,19 @@ exports.checkout = async (req, res) => {
 
     if (paymentMethod === 'card') {
         const productsWithPrice = await Promise.all(products.map(async (item) => {
+            // External image orders don't have a DB product — use price passed from frontend
+            if (item.externalImageUrl) {
+                return {
+                    quantity: item.quantity || 1,
+                    priceAtPurchase: item.priceAtPurchase,
+                    isCustom: true,
+                    externalImageUrl: item.externalImageUrl,
+                    imageSource: item.imageSource || 'external',
+                    productType: item.productType || 'Poster',
+                    frameOptions: item.frameOptions
+                };
+            }
+
             const product = await Product.findById(item.product);
             return {
                 product: product._id,

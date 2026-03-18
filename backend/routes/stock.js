@@ -71,4 +71,50 @@ router.get('/unsplash', async (req, res) => {
     }
 });
 
+// Validate External Image URL (no storage — just probe the URL)
+router.post('/validate-url', async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).send({ error: 'URL is required' });
+
+        // Validate URL format
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(url);
+        } catch {
+            return res.status(400).send({ error: 'Invalid URL format' });
+        }
+
+        // Only allow http/https
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+            return res.status(400).send({ error: 'Only HTTP/HTTPS URLs are allowed' });
+        }
+
+        // Probe the URL with a HEAD request to verify it's an image
+        const response = await axios.head(url, {
+            timeout: 8000,
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PosterClone/1.0)' }
+        });
+
+        const contentType = response.headers['content-type'] || '';
+        if (!contentType.startsWith('image/')) {
+            return res.status(422).send({ error: 'URL does not point to an image file' });
+        }
+
+        res.send({
+            valid: true,
+            url,
+            contentType,
+            source: parsedUrl.hostname
+        });
+    } catch (error) {
+        const status = error.response?.status;
+        if (status === 403 || status === 401) {
+            // Some CDNs block HEAD requests — still likely a valid image
+            return res.send({ valid: true, url, contentType: 'image/unknown', source: '' });
+        }
+        res.status(500).send({ error: 'Could not reach the image URL. It may be private or unavailable.' });
+    }
+});
+
 module.exports = router;

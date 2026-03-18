@@ -8,6 +8,9 @@ const orderSchema = new mongoose.Schema({
         priceAtPurchase: Number,
         isCustom: { type: Boolean, default: false },
         customImage: String, // URL if custom upload
+        externalImageUrl: String, // URL from Pinterest/Cosmos/external source (never stored as file)
+        imageSource: String,      // e.g. 'pinterest', 'cosmos', 'custom_url'
+        productType: String,      // e.g. 'Poster', 'Canvas', 'Calendar', 'Card', 'Mug'
         frameOptions: {
             hasFrame: { type: Boolean, default: false },
             material: String,

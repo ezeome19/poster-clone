@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getProducts } from '../api/api';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ExternalLink, PuzzleIcon } from 'lucide-react';
 import HeroBanner from '../components/home/HeroBanner';
 import SubjectGrid from '../components/home/SubjectGrid';
 import TrendingCarousel from '../components/home/TrendingCarousel';
@@ -33,6 +33,46 @@ const Home = () => {
             <PromotionalStrip />
             <SubjectGrid />
             <TrendingCarousel products={products} />
+
+            {/* Import from Web Section */}
+            <section className="max-w-7xl mx-auto px-4 py-20">
+                <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-[2.5rem] p-12 md:p-16 flex flex-col md:flex-row items-center justify-between gap-10">
+                    <div className="max-w-xl">
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-4">New Feature</p>
+                        <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none mb-4">
+                            Import from <span className="text-blue-400">Pinterest</span> or <span className="text-indigo-400">Cosmos</span>
+                        </h2>
+                        <p className="text-gray-400 text-lg mb-8 leading-relaxed">
+                            Found the perfect image online? Paste its URL and we'll turn it into a poster, canvas, calendar, and more — no download needed.
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                            <Link
+                                to="/external"
+                                className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-full hover:bg-blue-500 transition-all duration-300 shadow-xl shadow-blue-900/40"
+                            >
+                                Try It Now <ArrowRight size={14} />
+                            </Link>
+                            <a
+                                href="#extension"
+                                className="inline-flex items-center gap-3 px-8 py-4 border border-white/10 text-white/70 font-black uppercase tracking-widest text-xs rounded-full hover:border-white/30 hover:text-white transition-all duration-300"
+                            >
+                                Get Browser Extension
+                            </a>
+                        </div>
+                    </div>
+                    <div className="flex gap-4 shrink-0">
+                        {[
+                            { name: 'Pinterest', logo: '📌', color: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20', text: 'text-red-400' },
+                            { name: 'Cosmos.so', logo: '🌌', color: 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20', text: 'text-indigo-400' },
+                        ].map(s => (
+                            <div key={s.name} className={`w-32 h-32 rounded-3xl border ${s.color} flex flex-col items-center justify-center gap-2 transition-colors cursor-default`}>
+                                <span className="text-4xl">{s.logo}</span>
+                                <span className={`text-xs font-black ${s.text}`}>{s.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
             <main id="curated-collection" className="max-w-7xl mx-auto px-4 py-32">
                 <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">

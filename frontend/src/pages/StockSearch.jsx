@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { searchPexelsImages, searchUnsplash } from '../api/api';
-import { Search, Download, Image as ImageIcon, Loader2, ExternalLink } from 'lucide-react';
+import { Search, Download, Image as ImageIcon, Loader2, ExternalLink, Wand2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import ProductTypeModal from '../components/ProductTypeModal';
 
 const StockSearch = () => {
     const [query, setQuery] = useState('');
@@ -10,6 +11,7 @@ const StockSearch = () => {
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
+    const [modalImage, setModalImage] = useState(null); // { url, source }
 
     const observer = useRef();
     const lastElementRef = useCallback(node => {
@@ -97,9 +99,16 @@ const StockSearch = () => {
     return (
         <div className="max-w-7xl mx-auto px-4 py-12">
             <Toaster />
+            {modalImage && (
+                <ProductTypeModal
+                    imageUrl={modalImage.url}
+                    imageSource={modalImage.source}
+                    onClose={() => setModalImage(null)}
+                />
+            )}
             <div className="text-center mb-12">
                 <h1 className="text-5xl font-black mb-4 tracking-tight">Stock Media Hub</h1>
-                <p className="text-gray-500 text-lg">High-resolution assets from Pexels and Unsplash.</p>
+                <p className="text-gray-500 text-lg">High-resolution assets from Pexels and Unsplash. Download or turn any image into a printed product.</p>
             </div>
 
             <form onSubmit={handleInitialSearch} className="max-w-3xl mx-auto mb-16 flex gap-3 p-2 bg-gray-50 rounded-3xl border border-gray-100">
@@ -151,14 +160,12 @@ const StockSearch = () => {
                                 >
                                     <Download size={16} /> Download
                                 </button>
-                                <a
-                                    href={item.creator_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="w-12 bg-white/10 backdrop-blur-md text-white rounded-xl flex items-center justify-center hover:bg-white/30 transition-colors border border-white/20"
+                                <button
+                                    onClick={() => setModalImage({ url: item.url, source: item.source })}
+                                    className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2 text-sm hover:bg-black transition-all shadow-xl"
                                 >
-                                    <ExternalLink size={18} />
-                                </a>
+                                    <Wand2 size={16} /> Make Product
+                                </button>
                             </div>
                         </div>
 

@@ -7,6 +7,7 @@ import AIEditor from './pages/AIEditor'
 import StockSearch from './pages/StockSearch'
 import CustomUpload from './pages/CustomUpload'
 import Checkout from './pages/Checkout'
+import ExternalImport from './pages/ExternalImport'
 import Navbar from './components/layout/Navbar'
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
                     <Route path="/stock" element={<StockSearch />} />
                     <Route path="/custom" element={<CustomUpload />} />
                     <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/external" element={<ExternalImport />} />
                 </Routes>
             </div>
         </div>

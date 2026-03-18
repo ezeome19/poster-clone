@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
-import Navbar from '../components/layout/Navbar';
+import { useLocation } from 'react-router-dom';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { createOrder, verifyOrder } from '../api/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { ShieldAlert, ImageOff } from 'lucide-react';
 
 const Checkout = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // External image data passed from ProductTypeModal via React Router state
+    const { externalImageUrl, imageSource, productType, price } = location.state || {};
+    const isExternalOrder = Boolean(externalImageUrl);
+
     const [form, setForm] = useState({
         email: '',
         fullName: '',
@@ -14,14 +21,25 @@ const Checkout = () => {
         phone: '',
         paymentMethod: 'card'
     });
+    const [copyrightAgreed, setCopyrightAgreed] = useState(false);
+    const [imgError, setImgError] = useState(false);
 
-    // Mock cart for now
-    const cart = [{ product: '65d4...', quantity: 1, priceAtPurchase: 5000 }];
-    const total = 5000;
+    // Cart: use external image item or fall back to mock cart
+    const cart = isExternalOrder
+        ? [{
+            externalImageUrl,
+            imageSource: imageSource || 'external',
+            productType: productType || 'Poster',
+            quantity: 1,
+            priceAtPurchase: price || 3500,
+          }]
+        : [{ product: '65d4...', quantity: 1, priceAtPurchase: 5000 }];
+
+    const total = isExternalOrder ? (price || 3500) : 5000;
 
     const config = {
-        public_key: 'FLWPUBK_TEST-CHANGEME', // Replace with real key
-        tx_ref: Date.now().toString(), // Temporary tx_ref for initialization
+        public_key: 'FLWPUBK_TEST-CHANGEME',
+        tx_ref: Date.now().toString(),
         amount: total + 1000,
         currency: 'NGN',
         payment_options: 'card,mobilemoney,ussd',
@@ -32,7 +50,7 @@ const Checkout = () => {
         },
         customizations: {
             title: 'Poster Clone',
-            description: 'Payment for posters',
+            description: `Payment for ${productType || 'product'}`,
         },
     };
 
@@ -40,6 +58,9 @@ const Checkout = () => {
 
     const handlePlaceOrder = async () => {
         if (!form.email || !form.fullName) return toast.error('Please fill required fields');
+        if (isExternalOrder && !copyrightAgreed) {
+            return toast.error('Please confirm the copyright disclaimer before ordering');
+        }
 
         toast.loading('Initializing checkout...', { id: 'checkout' });
 
@@ -103,13 +124,65 @@ const Checkout = () => {
                             </label>
                         </div>
                     </div>
+
+                    {/* Copyright disclaimer — only shown for external image orders */}
+                    {isExternalOrder && (
+                        <div className={`p-5 rounded-2xl border-2 transition-all ${copyrightAgreed ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+                            <div className="flex items-start gap-4">
+                                <ShieldAlert size={20} className={`shrink-0 mt-0.5 ${copyrightAgreed ? 'text-green-600' : 'text-amber-600'}`} />
+                                <div className="flex-1">
+                                    <p className="font-bold text-sm mb-2">Copyright & Usage Agreement</p>
+                                    <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                                        I confirm that I own or have the legal right to use this image. This product is for <strong>personal use only</strong>. I will <strong>not resell</strong> this printed product commercially. I understand that I am solely responsible for any copyright issues.
+                                    </p>
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <div
+                                            onClick={() => setCopyrightAgreed(!copyrightAgreed)}
+                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 ${copyrightAgreed ? 'bg-green-600 border-green-600' : 'border-gray-300 group-hover:border-amber-500'}`}
+                                        >
+                                            {copyrightAgreed && <span className="text-white text-xs font-black">✓</span>}
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-700">I agree to the above terms</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 h-fit sticky top-24">
                     <h3 className="font-bold mb-6 text-xl">Order Summary</h3>
+
+                    {/* External image preview in Order Summary */}
+                    {isExternalOrder && (
+                        <div className="mb-6 rounded-2xl overflow-hidden bg-gray-100 aspect-video relative">
+                            {imgError ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-2">
+                                    <ImageOff size={28} />
+                                    <p className="text-xs">Image preview unavailable</p>
+                                </div>
+                            ) : (
+                                <img
+                                    src={externalImageUrl}
+                                    alt="Your custom image"
+                                    className="w-full h-full object-cover"
+                                    onError={() => setImgError(true)}
+                                />
+                            )}
+                            <div className="absolute bottom-0 inset-x-0 bg-black/50 backdrop-blur-sm py-2 px-3 flex items-center justify-between">
+                                <span className="text-white text-[10px] font-black uppercase tracking-widest">
+                                    {productType || 'Poster'}
+                                </span>
+                                <span className="text-white/60 text-[10px] uppercase">{imageSource}</span>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex flex-col gap-4 border-b pb-6 mb-6">
                         <div className="flex justify-between items-center font-medium">
-                            <p className="text-gray-500">Subtotal</p>
+                            <p className="text-gray-500">
+                                {isExternalOrder ? `${productType || 'Custom Print'} (×1)` : 'Subtotal'}
+                            </p>
                             <p>₦{total.toLocaleString()}</p>
                         </div>
                         <div className="flex justify-between items-center font-medium">
@@ -122,9 +195,24 @@ const Checkout = () => {
                         <p className="font-black text-2xl">₦{(total + 1000).toLocaleString()}</p>
                     </div>
 
-                    <button onClick={handlePlaceOrder} className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase text-lg hover:bg-gray-800 transition shadow-2xl">
+                    <button
+                        onClick={handlePlaceOrder}
+                        disabled={isExternalOrder && !copyrightAgreed}
+                        className={`w-full py-5 rounded-2xl font-black uppercase text-lg transition shadow-2xl ${
+                            isExternalOrder && !copyrightAgreed
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-black text-white hover:bg-gray-800'
+                        }`}
+                    >
                         Place Order
                     </button>
+
+                    {isExternalOrder && !copyrightAgreed && (
+                        <p className="text-center text-[10px] text-amber-500 mt-3 font-bold uppercase tracking-widest">
+                            ↑ Please agree to the copyright terms
+                        </p>
+                    )}
+
                     <p className="text-center text-[10px] text-gray-400 mt-4 uppercase tracking-widest px-4">Secure encrypted SSL checkout powered by Flutterwave</p>
                 </div>
             </div>
