@@ -104,8 +104,17 @@ function showOverlay(x, y, imageUrl) {
 
     overlay.addEventListener('click', (e) => {
         e.stopPropagation();
-        chrome.runtime.sendMessage({ type: 'OPEN_IN_POSTERCLONE', imageUrl });
         removeOverlay();
+        try {
+            // Try to open via background script
+            chrome.runtime.sendMessage({ type: 'OPEN_IN_POSTERCLONE', imageUrl }, () => {
+                void chrome.runtime.lastError; // Suppress unchecked error warning
+            });
+        } catch (err) {
+            // Extension context was invalidated (e.g. after reload) — open directly
+            const targetUrl = `${POSTER_CLONE_URL}/external?url=${encodeURIComponent(imageUrl)}`;
+            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        }
     });
 
     document.body.appendChild(overlay);
