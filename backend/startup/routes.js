@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const products = require('../routes/products');
 const orders = require('../routes/orders');
 const ai = require('../routes/ai');
@@ -15,14 +16,16 @@ module.exports = function (app) {
     app.use('/api/ai', ai);
     app.use('/api/stock', stock);
 
-    // Serve built React frontend (production)
+    // Serve built React frontend (only in production when dist exists)
     const frontendDist = path.join(__dirname, '../../frontend/dist');
-    app.use(express.static(frontendDist));
+    if (fs.existsSync(frontendDist)) {
+        app.use(express.static(frontendDist));
 
-    // Catch-all: send index.html for any non-API route (React Router SPA support)
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendDist, 'index.html'));
-    });
+        // Catch-all: send index.html for any non-API route (React Router SPA)
+        app.get('*', (req, res) => {
+            res.sendFile(path.join(frontendDist, 'index.html'));
+        });
+    }
 
     app.use(error);
 };
