@@ -98,7 +98,9 @@ router.post('/validate-url', async (req, res) => {
 
         const contentType = response.headers['content-type'] || '';
         if (!contentType.startsWith('image/')) {
-            return res.status(422).send({ error: 'URL does not point to an image file' });
+            return res.status(422).send({
+                error: `That URL points to a ${contentType.split(';')[0] || 'webpage'}, not an image. You need to right-click the image on the site and choose "Copy image address", then paste that direct image link here.`
+            });
         }
 
         res.send({

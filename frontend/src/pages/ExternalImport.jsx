@@ -15,7 +15,7 @@ const SOURCE_SHORTCUTS = [
     },
     {
         name: 'Cosmos',
-        url: 'https://www.cosmos.so/explore?q=',
+        url: 'https://www.cosmos.so/search/elements/',
         placeholder: 'nature',
         color: 'bg-indigo-600',
         logo: '🌌'
@@ -66,7 +66,8 @@ const ExternalImport = () => {
     };
 
     const openSource = (source) => {
-        const query = encodeURIComponent(searchQuery || source.placeholder);
+        const term = searchQuery.trim() || source.placeholder;
+        const query = encodeURIComponent(term);
         window.open(`${source.url}${query}`, '_blank', 'noopener,noreferrer');
     };
 
@@ -133,8 +134,8 @@ const ExternalImport = () => {
                             </button>
                         ))}
                     </div>
-                    <p className="text-center text-xs text-gray-300 mt-4 font-medium">
-                        After opening the site, right-click an image → "Copy image address" then paste below
+                    <p className="text-center text-xs text-gray-400 mt-4 font-medium leading-relaxed">
+                        After the site opens, find your image, then <strong>right-click it</strong> → <strong>"Copy image address"</strong> and paste that URL below.
                     </p>
                 </div>
 
@@ -146,7 +147,7 @@ const ExternalImport = () => {
                             <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                             <input
                                 type="url"
-                                placeholder="https://i.pinimg.com/originals/..."
+                                placeholder="Right-click an image on Pinterest/Cosmos → Copy image address → Paste here"
                                 className="w-full pl-11 pr-4 py-4 rounded-2xl border-2 border-gray-100 focus:border-blue-500/30 focus:outline-none text-sm transition-all bg-gray-50 focus:bg-white"
                                 value={url}
                                 onChange={e => { setUrl(e.target.value); setValidatedUrl(null); setImgLoaded(false); setImgError(false); }}
