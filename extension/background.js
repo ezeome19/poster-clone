@@ -10,6 +10,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'OPEN_IN_POSTERCLONE' && message.imageUrl) {
         const targetUrl = `${POSTER_CLONE_URL}/external?url=${encodeURIComponent(message.imageUrl)}`;
         chrome.tabs.create({ url: targetUrl });
-        sendResponse({ success: true });
+        // Respond safely — ignore back/forward cache port errors
+        try { sendResponse({ success: true }); } catch (e) {}
     }
+    return true; // Keep message channel open for async response
 });
