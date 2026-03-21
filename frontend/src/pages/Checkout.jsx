@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { createOrder, verifyOrder } from '../api/api';
+import { checkout, verifyOrder } from '../api/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, ImageOff } from 'lucide-react';
@@ -11,7 +11,7 @@ const Checkout = () => {
     const location = useLocation();
 
     // External image data passed from ProductTypeModal via React Router state
-    const { externalImageUrl, imageSource, productType, price } = location.state || {};
+    const { externalImageUrl, displayImageUrl, imageSource, productType, price } = location.state || {};
     const isExternalOrder = Boolean(externalImageUrl);
 
     const [form, setForm] = useState({
@@ -186,7 +186,7 @@ const Checkout = () => {
                                 </div>
                             ) : (
                                 <img
-                                    src={externalImageUrl}
+                                    src={displayImageUrl || externalImageUrl}
                                     alt="Your custom image"
                                     className="w-full h-full object-cover"
                                     onError={() => setImgError(true)}

@@ -21,4 +21,6 @@ export const validateExternalUrl = (url) => api.post('/stock/validate-url', { ur
 export const checkout = (orderData) => api.post('/orders/checkout', orderData);
 export const verifyOrder = (verificationData) => api.post('/orders/verify', verificationData);
 
+export const getProxyUrl = (url) => `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/stock/proxy?url=${encodeURIComponent(url)}`;
+
 export default api;

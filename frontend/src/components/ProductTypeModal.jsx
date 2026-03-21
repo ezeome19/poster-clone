@@ -10,7 +10,7 @@ const PRODUCT_TYPES = [
     { id: 'Mug', label: 'Mug', description: '11oz ceramic full-wrap print', price: 2500, emoji: '☕' },
 ];
 
-const ProductTypeModal = ({ imageUrl, imageSource, onClose }) => {
+const ProductTypeModal = ({ imageUrl, displayUrl, imageSource, onClose }) => {
     const navigate = useNavigate();
     const [selected, setSelected] = useState(null);
 
@@ -20,6 +20,7 @@ const ProductTypeModal = ({ imageUrl, imageSource, onClose }) => {
         navigate('/checkout', {
             state: {
                 externalImageUrl: imageUrl,
+                displayImageUrl: displayUrl,
                 imageSource: imageSource || 'external',
                 productType: selected,
                 price: product.price,
@@ -50,7 +51,7 @@ const ProductTypeModal = ({ imageUrl, imageSource, onClose }) => {
                 {imageUrl && (
                     <div className="mx-8 mt-6 h-32 rounded-2xl overflow-hidden bg-gray-100 relative">
                         <img
-                            src={imageUrl}
+                            src={displayUrl || imageUrl}
                             alt="Selected media"
                             className="w-full h-full object-cover"
                             onError={e => { e.target.style.display = 'none'; }}

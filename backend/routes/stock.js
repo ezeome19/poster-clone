@@ -119,4 +119,24 @@ router.post('/validate-url', async (req, res) => {
     }
 });
 
+// Proxy External Image (to bypass CORS for cropper/previews)
+router.get('/proxy', async (req, res) => {
+    try {
+        const { url } = req.query;
+        if (!url) return res.status(400).send({ error: 'URL is required' });
+
+        const response = await axios.get(url, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PosterClone/1.0)' },
+            timeout: 15000
+        });
+
+        // Forward content-type and stream the image back
+        res.set('Content-Type', response.headers['content-type']);
+        response.data.pipe(res);
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to proxy image' });
+    }
+});
+
 module.exports = router;

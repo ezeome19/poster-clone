@@ -4,6 +4,7 @@ import { Link2, ExternalLink, ImageOff, Loader2, Wand2, ShieldAlert, X, CheckCir
 import toast, { Toaster } from 'react-hot-toast';
 import ProductTypeModal from '../components/ProductTypeModal';
 import ImageCropModal from '../components/ImageCropModal';
+import { validateExternalUrl, getProxyUrl } from '../api/api';
 
 const SOURCE_SHORTCUTS = [
     {
@@ -25,8 +26,9 @@ const SOURCE_SHORTCUTS = [
 const ExternalImport = () => {
     const [searchParams] = useSearchParams();
     const [url, setUrl] = useState('');
-    const [previewUrl, setPreviewUrl] = useState(null);   // shown immediately on paste
-    const [croppedUrl, setCroppedUrl] = useState(null);   // final url for the product
+    const [originalUrl, setOriginalUrl] = useState(null); // original external url
+    const [previewUrl, setPreviewUrl] = useState(null);   // proxied url for display
+    const [croppedUrl, setCroppedUrl] = useState(null);   // blob url from cropper
     const [imgStatus, setImgStatus] = useState('idle');   // 'idle' | 'loading' | 'ok' | 'error'
     const [showCropModal, setShowCropModal] = useState(false);
     const [showTypeModal, setShowTypeModal] = useState(false);
@@ -54,7 +56,7 @@ const ExternalImport = () => {
         debounceRef.current = setTimeout(() => loadPreview(value.trim()), 600);
     };
 
-    const loadPreview = (rawUrl) => {
+    const loadPreview = async (rawUrl) => {
         try {
             // Basic sanity check — must look like an http URL
             const parsed = new URL(rawUrl);
@@ -62,11 +64,24 @@ const ExternalImport = () => {
                 toast.error('Only HTTP/HTTPS URLs are supported');
                 return;
             }
-            setPreviewUrl(rawUrl);
+
             setImgStatus('loading');
-            setCroppedUrl(null); // Reset crop on new url
-        } catch {
-            toast.error('That doesn\'t look like a valid URL');
+            
+            // Validate via backend to ensure it's a direct image
+            const { data } = await validateExternalUrl(rawUrl);
+            
+            if (data.valid) {
+                setOriginalUrl(rawUrl);
+                // Use proxy URL for the preview to avoid CORS issues
+                const proxyUrl = getProxyUrl(rawUrl);
+                setPreviewUrl(proxyUrl);
+                setCroppedUrl(null); // Reset crop on new url
+                // Note: setImgStatus('ok') will be called by img.onLoad
+            }
+        } catch (err) {
+            setImgStatus('error');
+            const errorMsg = err.response?.data?.error || 'That doesn\'t look like a valid direct image URL';
+            toast.error(errorMsg);
         }
     };
 
@@ -78,6 +93,7 @@ const ExternalImport = () => {
 
     const handleClear = () => {
         setUrl('');
+        setOriginalUrl(null);
         setPreviewUrl(null);
         setCroppedUrl(null);
         setImgStatus('idle');
@@ -107,8 +123,9 @@ const ExternalImport = () => {
             {/* Phase 2: Select Product Type */}
             {showTypeModal && (croppedUrl || previewUrl) && (
                 <ProductTypeModal
-                    imageUrl={croppedUrl || previewUrl}
-                    imageSource={new URL(previewUrl).hostname}
+                    imageUrl={croppedUrl || originalUrl}
+                    displayUrl={croppedUrl || previewUrl}
+                    imageSource={new URL(originalUrl).hostname}
                     onClose={() => setShowTypeModal(false)}
                 />
             )}
