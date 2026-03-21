@@ -6,17 +6,23 @@ const { generatePaymentLink, verifyPayment } = require("../utility/flutterwave")
 // Initialize checkout — creates a temporary transaction record
 exports.checkout = async (req, res) => {
     try {
-        const { products, shippingAddress, shippingFee, paymentMethod } = req.body;
+        let { products, shippingAddress, shippingFee, paymentMethod } = req.body;
 
-        if (paymentMethod !== 'card') {
-            // Placeholder for direct order (e.g., COD)
-            const order = new Order({ ...req.body, status: 'processing' });
-            await order.save();
-            return res.status(201).send(order);
+        // Normalize shipping address (handle top-level fields from frontend)
+        if (!shippingAddress || !shippingAddress.email) {
+            shippingAddress = {
+                fullName: req.body.fullName,
+                email: req.body.email,
+                address: req.body.address,
+                phone: req.body.phone,
+                state: req.body.state,
+                country: req.body.country || 'Nigeria'
+            };
         }
 
         if (!products || !products.length) return res.status(400).send("No products provided.");
 
+        // Process products to handle external images and verify prices
         const productsWithPrice = await Promise.all(products.map(async (item) => {
             if (item.externalImageUrl) {
                 return {
@@ -31,7 +37,7 @@ exports.checkout = async (req, res) => {
             }
 
             const product = await Product.findById(item.product);
-            if (!product) throw new Error("Product not found");
+            if (!product) throw new Error(`Product not found: ${item.product}`);
             return {
                 product: product._id,
                 quantity: item.quantity,
@@ -42,6 +48,24 @@ exports.checkout = async (req, res) => {
 
         const subTotal = productsWithPrice.reduce((sum, item) => sum + item.quantity * item.priceAtPurchase, 0);
         const totalAmount = subTotal + (shippingFee || 0);
+
+        if (paymentMethod !== 'card') {
+            // Handle Direct Order (e.g., Pay on Delivery)
+            const order = new Order({
+                products: productsWithPrice,
+                shippingAddress,
+                shippingFee,
+                subTotal,
+                totalAmount,
+                payment: {
+                    method: paymentMethod === 'pod' ? 'cash_on_delivery' : paymentMethod,
+                    status: 'pending'
+                },
+                status: 'processing'
+            });
+            await order.save();
+            return res.status(201).send(order);
+        }
 
         const tx_ref = `pc_${Date.now()}`;
 
@@ -67,6 +91,7 @@ exports.checkout = async (req, res) => {
         res.status(500).send(error.message);
     }
 };
+
 
 const { finalizeOrder } = require("../utility/order.service");
 
