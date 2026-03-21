@@ -5,6 +5,7 @@ const products = require('../routes/products');
 const orders = require('../routes/orders');
 const ai = require('../routes/ai');
 const stock = require('../routes/stock');
+const webhooks = require('../routes/webhooks');
 const error = require('../middleware/error');
 
 module.exports = function (app) {
@@ -15,6 +16,7 @@ module.exports = function (app) {
     app.use('/api/orders', orders);
     app.use('/api/ai', ai);
     app.use('/api/stock', stock);
+    app.use('/api/webhooks', webhooks);
 
     // Serve built React frontend (only in production when dist exists)
     const frontendDist = path.join(__dirname, '../../frontend/dist');

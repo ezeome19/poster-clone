@@ -18,7 +18,7 @@ export const searchUnsplash = (query, page) => api.get('/stock/unsplash', { para
 export const validateExternalUrl = (url) => api.post('/stock/validate-url', { url });
 
 // Orders & Checkout
-export const createOrder = (orderData) => api.post('/orders', orderData);
+export const checkout = (orderData) => api.post('/orders/checkout', orderData);
 export const verifyOrder = (verificationData) => api.post('/orders/verify', verificationData);
 
 export default api;

@@ -71,35 +71,37 @@ const ProductTypeModal = ({ imageUrl, imageSource, onClose }) => {
                     </p>
                 </div>
 
-                {/* Product type grid */}
-                <div className="p-8 pt-5 grid grid-cols-1 gap-3">
-                    {PRODUCT_TYPES.map(type => (
-                        <button
-                            key={type.id}
-                            onClick={() => setSelected(type.id)}
-                            className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left
-                                ${selected === type.id
-                                    ? 'border-black bg-gray-50 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)]'
-                                    : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50/50'
-                                }`}
-                        >
-                            <span className="text-2xl w-10 text-center">{type.emoji}</span>
-                            <div className="flex-1">
-                                <p className="font-black text-sm">{type.label}</p>
-                                <p className="text-gray-400 text-xs">{type.description}</p>
-                            </div>
-                            <p className="font-black text-sm">₦{type.price.toLocaleString()}</p>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                selected === type.id ? 'border-black bg-black' : 'border-gray-200'
-                            }`}>
-                                {selected === type.id && <div className="w-2 h-2 rounded-full bg-white" />}
-                            </div>
-                        </button>
-                    ))}
+                {/* Product type list — scrollable */}
+                <div className="px-8 pt-5">
+                    <div className="max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar grid grid-cols-1 gap-3">
+                        {PRODUCT_TYPES.map(type => (
+                            <button
+                                key={type.id}
+                                onClick={() => setSelected(type.id)}
+                                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left
+                                    ${selected === type.id
+                                        ? 'border-black bg-gray-50 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)]'
+                                        : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50/50'
+                                    }`}
+                            >
+                                <span className="text-2xl w-10 text-center">{type.emoji}</span>
+                                <div className="flex-1">
+                                    <p className="font-black text-sm">{type.label}</p>
+                                    <p className="text-gray-400 text-xs">{type.description}</p>
+                                </div>
+                                <p className="font-black text-sm">₦{type.price.toLocaleString()}</p>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                    selected === type.id ? 'border-black bg-black' : 'border-gray-200'
+                                }`}>
+                                    {selected === type.id && <div className="w-2 h-2 rounded-full bg-white" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* CTA */}
-                <div className="px-8 pb-8">
+                <div className="p-8">
                     <button
                         disabled={!selected}
                         onClick={handleContinue}
@@ -111,6 +113,13 @@ const ProductTypeModal = ({ imageUrl, imageSource, onClose }) => {
                     >
                         Continue to Checkout <ArrowRight size={16} />
                     </button>
+                    
+                    <style>{`
+                        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                        .custom-scrollbar::-webkit-scrollbar-track { background: translucent; }
+                        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+                        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+                    `}</style>
                 </div>
             </div>
         </div>

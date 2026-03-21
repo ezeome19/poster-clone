@@ -3,12 +3,21 @@ const Product = require("../models/product.model");
 const Transaction = require("../models/transaction.model");
 const { generatePaymentLink, verifyPayment } = require("../utility/flutterwave");
 
+// Initialize checkout — creates a temporary transaction record
 exports.checkout = async (req, res) => {
-    const { products, shippingAddress, shippingFee, paymentMethod } = req.body;
+    try {
+        const { products, shippingAddress, shippingFee, paymentMethod } = req.body;
 
-    if (paymentMethod === 'card') {
+        if (paymentMethod !== 'card') {
+            // Placeholder for direct order (e.g., COD)
+            const order = new Order({ ...req.body, status: 'processing' });
+            await order.save();
+            return res.status(201).send(order);
+        }
+
+        if (!products || !products.length) return res.status(400).send("No products provided.");
+
         const productsWithPrice = await Promise.all(products.map(async (item) => {
-            // External image orders don't have a DB product — use price passed from frontend
             if (item.externalImageUrl) {
                 return {
                     quantity: item.quantity || 1,
@@ -22,6 +31,7 @@ exports.checkout = async (req, res) => {
             }
 
             const product = await Product.findById(item.product);
+            if (!product) throw new Error("Product not found");
             return {
                 product: product._id,
                 quantity: item.quantity,
@@ -33,53 +43,58 @@ exports.checkout = async (req, res) => {
         const subTotal = productsWithPrice.reduce((sum, item) => sum + item.quantity * item.priceAtPurchase, 0);
         const totalAmount = subTotal + (shippingFee || 0);
 
-        const tx_ref = `txn_${Date.now()}`;
+        const tx_ref = `pc_${Date.now()}`;
+
+        // Create a transaction record to hold the order data until payment is verified
         await Transaction.create({
             tx_ref,
-            orderData: { products: productsWithPrice, shippingAddress, subTotal, shippingFee, totalAmount }
+            orderData: { products: productsWithPrice, shippingAddress, subTotal, shippingFee, totalAmount },
+            status: 'pending'
         });
 
-        const paymentLink = await generatePaymentLink({
-            amount: totalAmount,
-            currency: "NGN",
-            email: shippingAddress.email,
-            name: shippingAddress.fullName,
+        // We return the info needed for the inline modal or redirect
+        res.status(200).send({
             tx_ref,
-            redirect_url: `${process.env.FRONTEND_URL}/checkout/verify?tx_ref=${tx_ref}`
+            amount: totalAmount,
+            customer: {
+                email: shippingAddress.email,
+                name: shippingAddress.fullName,
+                phone: shippingAddress.phone || ""
+            }
         });
-
-        return res.send({ link: paymentLink.link, tx_ref, amount: totalAmount });
+    } catch (error) {
+        console.error("Checkout Initialization Failed:", error);
+        res.status(500).send(error.message);
     }
-
-    // Handle Cash on Delivery
-    const order = new Order({ ...req.body, status: 'processing' });
-    await order.save();
-    res.send(order);
 };
 
+const { finalizeOrder } = require("../utility/order.service");
+
+// Verify the payment and convert transaction to a final order
 exports.verifyOrder = async (req, res) => {
-    const { transaction_id } = req.body;
-    const verificationData = await verifyPayment(transaction_id);
+    try {
+        const { transaction_id } = req.body;
+        if (!transaction_id) return res.status(400).send("Transaction ID is required.");
 
-    if (!verificationData || verificationData.status !== "successful") {
-        return res.status(400).send("Payment verification failed.");
-    }
+        const verificationData = await verifyPayment(transaction_id);
 
-    const transaction = await Transaction.findOne({ tx_ref: verificationData.tx_ref });
-    if (!transaction) return res.status(404).send("Transaction not found.");
+        if (!verificationData || verificationData.status !== "successful") {
+            return res.status(400).send("Payment verification failed.");
+        }
 
-    const order = new Order({
-        ...transaction.orderData,
-        payment: {
-            method: 'card',
-            status: 'successful',
+        // Finalize using the shared service (handles idempotency)
+        const { alreadyProcessed, order } = await finalizeOrder({
             transactionId: transaction_id,
             tx_ref: verificationData.tx_ref
+        });
+
+        if (alreadyProcessed) {
+            return res.status(200).json({ message: "Order already processed", order });
         }
-    });
 
-    await order.save();
-    await Transaction.deleteOne({ tx_ref: verificationData.tx_ref });
-
-    res.send(order);
+        res.status(201).json(order);
+    } catch (error) {
+        console.error("Order Verification Failed:", error);
+        res.status(500).send(error.message);
+    }
 };

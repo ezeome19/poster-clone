@@ -23,6 +23,7 @@ const Checkout = () => {
     });
     const [copyrightAgreed, setCopyrightAgreed] = useState(false);
     const [imgError, setImgError] = useState(false);
+    const [isInitializing, setIsInitializing] = useState(false);
 
     // Cart: use external image item or fall back to mock cart
     const cart = isExternalOrder
@@ -37,8 +38,10 @@ const Checkout = () => {
 
     const total = isExternalOrder ? (price || 3500) : 5000;
 
-    const config = {
-        public_key: 'FLWPUBK_TEST-CHANGEME',
+    // Flutterwave hook initialization with a "base" config
+    // We will override properties when calling the payment function
+    const handleFlutterPayment = useFlutterwave({
+        public_key: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-CHANGEME',
         tx_ref: Date.now().toString(),
         amount: total + 1000,
         currency: 'NGN',
@@ -52,45 +55,65 @@ const Checkout = () => {
             title: 'Poster Clone',
             description: `Payment for ${productType || 'product'}`,
         },
-    };
-
-    const handleFlutterPayment = useFlutterwave(config);
+    });
 
     const handlePlaceOrder = async () => {
-        if (!form.email || !form.fullName) return toast.error('Please fill required fields');
+        if (!form.email || !form.fullName || !form.address) return toast.error('Please fill all required fields');
         if (isExternalOrder && !copyrightAgreed) {
             return toast.error('Please confirm the copyright disclaimer before ordering');
         }
 
-        toast.loading('Initializing checkout...', { id: 'checkout' });
+        setIsInitializing(true);
+        const toastId = toast.loading('Initializing secure checkout...');
 
         try {
-            const res = await createOrder({
+            // 1. Initialize checkout on the backend to get a secure txn_ref and final amount
+            const { data: checkoutData } = await checkout({
                 ...form,
                 products: cart,
                 shippingFee: 1000
             });
 
             if (form.paymentMethod === 'card') {
+                // 2. Open Flutterwave with the backend-provided data
                 handleFlutterPayment({
                     callback: async (response) => {
                         closePaymentModal();
+                        
                         if (response.status === "successful") {
-                            await verifyOrder({ transaction_id: response.transaction_id });
-                            toast.success('Order placed successfully!', { id: 'checkout' });
-                            navigate('/');
+                            toast.loading('Verifying payment...', { id: toastId });
+                            try {
+                                // 3. Verify the transaction on the backend
+                                await verifyOrder({ transaction_id: response.transaction_id });
+                                toast.success('Order placed successfully!', { id: toastId });
+                                navigate('/');
+                            } catch (verifyErr) {
+                                toast.error('Verification failed. Please contact support.', { id: toastId });
+                            }
                         } else {
-                            toast.error('Payment failed', { id: 'checkout' });
+                            toast.error('Payment failed', { id: toastId });
                         }
+                        setIsInitializing(false);
                     },
-                    onClose: () => toast.error('Payment cancelled', { id: 'checkout' }),
+                    onClose: () => {
+                        toast.dismiss(toastId);
+                        setIsInitializing(false);
+                    },
+                    // Direct overrides from backend initialization
+                    tx_ref: checkoutData.tx_ref,
+                    amount: checkoutData.amount,
+                    customer: checkoutData.customer
                 });
             } else {
-                toast.success('Order placed (COD)!', { id: 'checkout' });
+                // Handle COD or other direct methods
+                toast.success('Order placed successfully!', { id: toastId });
                 navigate('/');
+                setIsInitializing(false);
             }
         } catch (err) {
-            toast.error('Checkout failed', { id: 'checkout' });
+            console.error("Checkout handle error:", err);
+            toast.error(err.response?.data || 'Checkout initialization failed', { id: toastId });
+            setIsInitializing(false);
         }
     };
 

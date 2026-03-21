@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Link2, ExternalLink, ImageOff, Loader2, Wand2, ShieldAlert, X, CheckCircle } from 'lucide-react';
+import { Link2, ExternalLink, ImageOff, Loader2, Wand2, ShieldAlert, X, CheckCircle, Crop } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import ProductTypeModal from '../components/ProductTypeModal';
+import ImageCropModal from '../components/ImageCropModal';
 
 const SOURCE_SHORTCUTS = [
     {
@@ -25,8 +26,10 @@ const ExternalImport = () => {
     const [searchParams] = useSearchParams();
     const [url, setUrl] = useState('');
     const [previewUrl, setPreviewUrl] = useState(null);   // shown immediately on paste
+    const [croppedUrl, setCroppedUrl] = useState(null);   // final url for the product
     const [imgStatus, setImgStatus] = useState('idle');   // 'idle' | 'loading' | 'ok' | 'error'
-    const [showModal, setShowModal] = useState(false);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [showTypeModal, setShowTypeModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const debounceRef = useRef(null);
 
@@ -37,7 +40,7 @@ const ExternalImport = () => {
             setUrl(urlParam);
             loadPreview(urlParam);
         }
-    }, []);
+    }, [searchParams]);
 
     // Auto-preview when URL is pasted / typed (debounced 600ms)
     const handleUrlChange = (value) => {
@@ -61,6 +64,7 @@ const ExternalImport = () => {
             }
             setPreviewUrl(rawUrl);
             setImgStatus('loading');
+            setCroppedUrl(null); // Reset crop on new url
         } catch {
             toast.error('That doesn\'t look like a valid URL');
         }
@@ -75,7 +79,14 @@ const ExternalImport = () => {
     const handleClear = () => {
         setUrl('');
         setPreviewUrl(null);
+        setCroppedUrl(null);
         setImgStatus('idle');
+    };
+
+    const handleCropComplete = (newUrl) => {
+        setCroppedUrl(newUrl);
+        setShowCropModal(false);
+        setShowTypeModal(true); // Move directly to product selection after crop
     };
 
     const imageReady = imgStatus === 'ok';
@@ -83,11 +94,22 @@ const ExternalImport = () => {
     return (
         <div className="min-h-screen bg-gray-50/40">
             <Toaster />
-            {showModal && previewUrl && imageReady && (
-                <ProductTypeModal
+            
+            {/* Phase 1: Crop */}
+            {showCropModal && previewUrl && (
+                <ImageCropModal
                     imageUrl={previewUrl}
+                    onCropComplete={handleCropComplete}
+                    onClose={() => setShowCropModal(false)}
+                />
+            )}
+
+            {/* Phase 2: Select Product Type */}
+            {showTypeModal && (croppedUrl || previewUrl) && (
+                <ProductTypeModal
+                    imageUrl={croppedUrl || previewUrl}
                     imageSource={new URL(previewUrl).hostname}
-                    onClose={() => setShowModal(false)}
+                    onClose={() => setShowTypeModal(false)}
                 />
             )}
 
@@ -103,29 +125,12 @@ const ExternalImport = () => {
                     </p>
                 </div>
 
-                {/* How it works */}
-                <div className="grid grid-cols-3 gap-4 mb-12 text-center">
-                    {[
-                        { step: '01', label: 'Browse a site below', icon: '🌐' },
-                        { step: '02', label: 'Paste the image URL', icon: '🔗' },
-                        { step: '03', label: 'Pick your product & order', icon: '📦' },
-                    ].map(s => (
-                        <div key={s.step} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                            <div className="text-2xl mb-2">{s.icon}</div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-300 mb-1">{s.step}</p>
-                            <p className="text-sm font-bold text-gray-700">{s.label}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Quick open panel */}
+                {/* Quick open panel — same as before */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 mb-8">
                     <h2 className="font-black text-sm uppercase tracking-widest mb-2 text-gray-400">Quick Open</h2>
                     <p className="text-xs text-gray-400 mb-5 leading-relaxed">
                         Type what you're looking for, open the site, find an image, then
                         <strong className="text-gray-700"> right-click → "Copy image address"</strong> and paste it below.
-                        <br />
-                        <span className="text-amber-500 font-bold">Pinterest tip:</span> Click on a pin to open the full image first, then right-click.
                     </p>
                     <div className="flex gap-3 mb-4">
                         <input
@@ -154,10 +159,6 @@ const ExternalImport = () => {
                 {/* URL Input */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 mb-6">
                     <h2 className="font-black text-sm uppercase tracking-widest mb-2 text-gray-400">Paste Image URL</h2>
-                    <p className="text-xs text-gray-400 mb-5">
-                        Paste the <strong className="text-gray-600">direct image URL</strong> (starts with https://i.pinimg.com or https://images.cosmos.so). The preview will appear automatically.
-                    </p>
-
                     <div className="flex gap-3">
                         <div className="flex-1 relative">
                             <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
@@ -170,83 +171,62 @@ const ExternalImport = () => {
                             />
                         </div>
                         {url && (
-                            <button
-                                onClick={handleClear}
-                                className="px-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-xs hover:bg-gray-200 transition"
-                            >
-                                Clear
-                            </button>
+                            <button onClick={handleClear} className="px-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-xs hover:bg-gray-200 transition">Clear</button>
                         )}
                     </div>
 
-                    {/* Image Preview — optimistic, no backend needed */}
                     {previewUrl && (
                         <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="relative rounded-2xl overflow-hidden bg-gray-100 min-h-40 flex items-center justify-center">
-                                {imgStatus === 'loading' && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-10">
-                                        <Loader2 className="animate-spin text-gray-300" size={32} />
-                                    </div>
-                                )}
-
-                                {imgStatus === 'error' ? (
-                                    <div className="py-14 flex flex-col items-center gap-3 text-gray-300 px-8 text-center">
+                                {imgStatus === 'loading' ? (
+                                    <Loader2 className="animate-spin text-gray-300" size={32} />
+                                ) : imgStatus === 'error' ? (
+                                    <div className="py-14 flex flex-col items-center gap-3 text-gray-300 px-8 text-center text-xs">
                                         <ImageOff size={40} />
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-500 mb-1">Can't display this image</p>
-                                            <p className="text-xs leading-relaxed">
-                                                This URL may not be a direct image link. Make sure to <strong>right-click the image itself</strong> on Pinterest/Cosmos and choose <strong>"Copy image address"</strong> — not the page URL from the browser address bar.
-                                            </p>
-                                        </div>
+                                        <p className="font-bold text-gray-500">Can't display this image. Try "Copy image address" from the original source.</p>
                                     </div>
                                 ) : (
                                     <img
-                                        src={previewUrl}
+                                        src={croppedUrl || previewUrl}
                                         alt="Preview"
-                                        className={`w-full max-h-96 object-contain transition-opacity duration-500 ${imgStatus === 'ok' ? 'opacity-100' : 'opacity-0'}`}
+                                        className="w-full max-h-96 object-contain"
                                         onLoad={() => setImgStatus('ok')}
                                         onError={() => setImgStatus('error')}
                                     />
                                 )}
 
-                                {imgStatus === 'ok' && (
-                                    <div className="absolute top-3 right-3">
-                                        <button onClick={handleClear} className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black transition">
-                                            <X size={14} />
-                                        </button>
-                                    </div>
-                                )}
-
-                                {imgStatus === 'ok' && (
+                                {imageReady && (
                                     <div className="absolute top-3 left-3 bg-green-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                                        <CheckCircle size={11} /> Image Ready
+                                        <CheckCircle size={11} /> Image Ready {croppedUrl && "(Cropped)"}
                                     </div>
                                 )}
                             </div>
 
                             {imageReady && (
-                                <button
-                                    onClick={() => setShowModal(true)}
-                                    className="w-full mt-5 bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all duration-300 flex items-center justify-center gap-3 shadow-xl shadow-black/10 active:scale-95"
-                                >
-                                    <Wand2 size={18} /> Make Something With This
-                                </button>
-                            )}
-
-                            {imgStatus === 'error' && (
-                                <p className="text-center text-xs text-amber-600 font-bold mt-4">
-                                    💡 Try installing the browser extension — it captures the correct image URL automatically without copy-pasting.
-                                </p>
+                                <div className="flex gap-3 mt-5">
+                                    <button
+                                        onClick={() => setShowCropModal(true)}
+                                        className="flex-1 border-2 border-black py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black hover:text-white transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Crop size={16} /> Edit / Crop
+                                    </button>
+                                    <button
+                                        onClick={() => setShowTypeModal(true)}
+                                        className="flex-[2] bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
+                                    >
+                                        <Wand2 size={18} /> Make Something
+                                    </button>
+                                </div>
                             )}
                         </div>
                     )}
                 </div>
-
-                {/* Copyright disclaimer */}
+                
+                {/* Copyright Disclaimer */}
                 <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-2xl p-5">
                     <ShieldAlert size={16} className="text-amber-500 shrink-0 mt-0.5" />
                     <p className="text-amber-800 text-xs leading-relaxed">
-                        <span className="font-bold">Copyright Notice.</span> Ensure you have the right to use any image you import. Products must be for personal, non-commercial use only. You are solely responsible for copyright compliance.
+                        <span className="font-bold">Copyright Notice.</span> Ensure you have the right to use any image you import. Products are for personal, non-commercial use only.
                     </p>
                 </div>
             </div>
