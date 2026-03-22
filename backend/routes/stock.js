@@ -143,8 +143,7 @@ async function resolveExternalUrl(inputUrl) {
 router.post('/validate-url', async (req, res) => {
     try {
         const { url: inputUrl } = req.body;
-        console.error(`VALIDATE-URL REQUEST START: ${inputUrl}`);
-        winston.error(`VALIDATE-URL REQUEST START: ${inputUrl}`);
+        winston.info(`VALIDATE-URL REQUEST START: ${inputUrl}`);
         if (!inputUrl) return res.status(400).send({ error: 'URL is required' });
 
         // Basic sanity check
@@ -156,8 +155,7 @@ router.post('/validate-url', async (req, res) => {
 
         // Resolve shared links (like Pinterest pins) to direct images
         const url = await resolveExternalUrl(inputUrl);
-        console.error(`Resolved URL result: ${url}`);
-        winston.error(`Resolved URL result: ${url}`);
+        winston.info(`Resolved URL result: ${url}`);
         const parsedUrl = new URL(url);
 
         // Only allow http/https
@@ -173,9 +171,7 @@ router.post('/validate-url', async (req, res) => {
                 headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PosterClone/1.0)' }
             });
         } catch (headError) {
-            // Some CDNs (including Pinterest/pinimg sometimes) block HEAD requests
-            // or return 403. If HEAD fails, we return valid: true as a fallback
-            // since we already passed basic checks, and let the proxy handle it.
+            winston.warn(`HEAD request failed for ${url}, falling back to success: ${headError.message}`);
             return res.send({
                 valid: true,
                 url,
@@ -187,6 +183,7 @@ router.post('/validate-url', async (req, res) => {
 
         const contentType = response.headers['content-type'] || '';
         if (!contentType.startsWith('image/')) {
+            winston.warn(`URL is not an image: ${contentType}`);
             return res.status(422).send({
                 error: `That URL points to a ${contentType.split(';')[0] || 'webpage'}, not an image. You need to right-click the image on the site and choose "Copy image address", then paste that direct image link here.`
             });
@@ -200,19 +197,24 @@ router.post('/validate-url', async (req, res) => {
             source: parsedUrl.hostname
         });
     } catch (error) {
+        winston.error(`Validation error for ${req.body.url}: ${error.message}`);
         res.status(500).send({ error: 'Could not reach the image URL. It may be private or unavailable.' });
     }
 });
 
 // Proxy External Image (to bypass CORS for cropper/previews)
 router.get('/proxy', async (req, res) => {
+    const { url } = req.query;
     try {
-        const { url } = req.query;
         if (!url) return res.status(400).send({ error: 'URL is required' });
 
+        winston.info(`Proxying image: ${url}`);
         const response = await axios.get(url, {
             responseType: 'stream',
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PosterClone/1.0)' },
+            headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://www.pinterest.com/'
+            },
             timeout: 15000
         });
 
@@ -220,7 +222,11 @@ router.get('/proxy', async (req, res) => {
         res.set('Content-Type', response.headers['content-type']);
         response.data.pipe(res);
     } catch (error) {
-        res.status(500).send({ error: 'Failed to proxy image' });
+        winston.error(`Proxy failure for ${url}: ${error.message}`);
+        if (error.response) {
+            winston.error(`Proxy target returned: ${error.response.status} ${JSON.stringify(error.response.data)}`);
+        }
+        res.status(500).send({ error: 'Failed to proxy image. The source might be blocking our server.' });
     }
 });
 
