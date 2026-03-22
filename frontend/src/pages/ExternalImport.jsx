@@ -74,6 +74,7 @@ const ExternalImport = () => {
                 setOriginalUrl(rawUrl);
                 // Use proxy URL for the preview to avoid CORS issues
                 const proxyUrl = getProxyUrl(rawUrl);
+                console.log('Setting Preview URL:', proxyUrl);
                 setPreviewUrl(proxyUrl);
                 setCroppedUrl(null); // Reset crop on new url
                 // Note: setImgStatus('ok') will be called by img.onLoad
