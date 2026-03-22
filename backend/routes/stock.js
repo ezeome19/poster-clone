@@ -1,6 +1,9 @@
 const express = require('express');
 const axios = require('axios');
+const winston = require('winston');
 const router = express.Router();
+
+winston.error('STOCK ROUTES MODULE LOADED');
 
 const PEXELS_URL = 'https://api.pexels.com/v1';
 const UNSPLASH_URL = 'https://api.unsplash.com';
@@ -71,19 +74,91 @@ router.get('/unsplash', async (req, res) => {
     }
 });
 
+/**
+ * Resolves social/sharing URLs (Pinterest, Cosmos, etc) to direct high-res image URLs
+ * by scraping the page's metadata if necessary.
+ */
+async function resolveExternalUrl(inputUrl) {
+    winston.info(`Resolving URL: ${inputUrl}`);
+    try {
+        const parsed = new URL(inputUrl);
+        const hostname = parsed.hostname.toLowerCase();
+
+        // 1. Pinterest (Pins and short-links)
+        if (hostname.includes('pinterest.') || hostname === 'pin.it') {
+            winston.error('Identified as Pinterest URL');
+            const response = await axios.get(inputUrl, {
+                headers: { 
+                    // Use a Bot User-Agent to encourage Pinterest to return meta tags for indexing
+                    'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5'
+                },
+                timeout: 10000,
+                maxRedirects: 10
+            });
+            const html = response.data;
+            winston.error(`Fetched HTML, length: ${html.length}`);
+            if (html.length < 2000) {
+                console.error(`SHORT HTML CONTENT:\n${html}`);
+            }
+            
+            // Robust regex for og:image, handle different quote styles and spacing
+            const ogMatch = html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+                          html.match(/<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["']og:image["']/i);
+
+            if (ogMatch && ogMatch[1]) {
+                let resolved = ogMatch[1];
+                winston.error(`Found og:image: ${resolved}`);
+                // Optimization: try to get the original high-res version if it's a pinimg link
+                if (resolved.includes('i.pinimg.com')) {
+                    resolved = resolved.replace(/\/\d+x\//, '/originals/');
+                    resolved = resolved.split('?')[0];
+                    winston.error(`Optimized pinimg URL: ${resolved}`);
+                }
+                return resolved;
+            } else {
+                winston.error('Could not find og:image in HTML. Pinterest might be blocking or redirecting.');
+            }
+        }
+
+        // 2. Cosmos.so
+        if (hostname.includes('cosmos.so')) {
+            const response = await axios.get(inputUrl, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PosterClone/1.0)' },
+                timeout: 8000
+            });
+            const ogMatch = response.data.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+            if (ogMatch && ogMatch[1]) return ogMatch[1];
+        }
+
+        return inputUrl;
+    } catch (error) {
+        winston.error(`Error resolving URL ${inputUrl}: ${error.message}`);
+        return inputUrl; // Fallback to original on any error
+    }
+}
+
 // Validate External Image URL (no storage — just probe the URL)
 router.post('/validate-url', async (req, res) => {
     try {
-        const { url } = req.body;
-        if (!url) return res.status(400).send({ error: 'URL is required' });
+        const { url: inputUrl } = req.body;
+        console.error(`VALIDATE-URL REQUEST START: ${inputUrl}`);
+        winston.error(`VALIDATE-URL REQUEST START: ${inputUrl}`);
+        if (!inputUrl) return res.status(400).send({ error: 'URL is required' });
 
-        // Validate URL format
-        let parsedUrl;
+        // Basic sanity check
         try {
-            parsedUrl = new URL(url);
+            new URL(inputUrl);
         } catch {
             return res.status(400).send({ error: 'Invalid URL format' });
         }
+
+        // Resolve shared links (like Pinterest pins) to direct images
+        const url = await resolveExternalUrl(inputUrl);
+        console.error(`Resolved URL result: ${url}`);
+        winston.error(`Resolved URL result: ${url}`);
+        const parsedUrl = new URL(url);
 
         // Only allow http/https
         if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
@@ -91,10 +166,24 @@ router.post('/validate-url', async (req, res) => {
         }
 
         // Probe the URL with a HEAD request to verify it's an image
-        const response = await axios.head(url, {
-            timeout: 8000,
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PosterClone/1.0)' }
-        });
+        let response;
+        try {
+            response = await axios.head(url, {
+                timeout: 8000,
+                headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PosterClone/1.0)' }
+            });
+        } catch (headError) {
+            // Some CDNs (including Pinterest/pinimg sometimes) block HEAD requests
+            // or return 403. If HEAD fails, we return valid: true as a fallback
+            // since we already passed basic checks, and let the proxy handle it.
+            return res.send({
+                valid: true,
+                url,
+                originalUrl: inputUrl,
+                contentType: 'image/jpeg', // Assumption
+                source: parsedUrl.hostname
+            });
+        }
 
         const contentType = response.headers['content-type'] || '';
         if (!contentType.startsWith('image/')) {
@@ -106,15 +195,11 @@ router.post('/validate-url', async (req, res) => {
         res.send({
             valid: true,
             url,
+            originalUrl: inputUrl,
             contentType,
             source: parsedUrl.hostname
         });
     } catch (error) {
-        const status = error.response?.status;
-        if (status === 403 || status === 401) {
-            // Some CDNs block HEAD requests — still likely a valid image
-            return res.send({ valid: true, url, contentType: 'image/unknown', source: '' });
-        }
         res.status(500).send({ error: 'Could not reach the image URL. It may be private or unavailable.' });
     }
 });

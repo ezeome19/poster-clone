@@ -80,7 +80,15 @@ const ExternalImport = () => {
             }
         } catch (err) {
             setImgStatus('error');
-            const errorMsg = err.response?.data?.error || 'That doesn\'t look like a valid direct image URL';
+            // Log the full error to help debugging
+            console.error('Validation Error:', err);
+            
+            // Priority: Backend error message -> Network error description -> Generic fallback
+            const errorMsg = err.response?.data?.error || 
+                             err.response?.data || 
+                             (err.code === 'ERR_NETWORK' ? 'Network error: Backend might be offline or blocked by CORS.' : null) ||
+                             'That doesn\'t look like a valid direct image URL';
+                             
             toast.error(errorMsg);
         }
     };

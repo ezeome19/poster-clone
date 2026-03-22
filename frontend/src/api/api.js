@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+console.log('API Base URL:', API_URL);
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+    baseURL: API_URL
 });
 
 export const getProducts = (params) => api.get('/products', { params });
@@ -21,6 +24,6 @@ export const validateExternalUrl = (url) => api.post('/stock/validate-url', { ur
 export const checkout = (orderData) => api.post('/orders/checkout', orderData);
 export const verifyOrder = (verificationData) => api.post('/orders/verify', verificationData);
 
-export const getProxyUrl = (url) => `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/stock/proxy?url=${encodeURIComponent(url)}`;
+export const getProxyUrl = (url) => `${API_URL}/stock/proxy?url=${encodeURIComponent(url)}`;
 
 export default api;
