@@ -38,9 +38,12 @@ const ExternalImport = () => {
     // Pre-fill from browser extension ?url= query param
     useEffect(() => {
         const urlParam = searchParams.get('url');
-        if (urlParam) {
+        if (urlParam && urlParam !== url) {
+            console.log('Detected URL via query param:', urlParam);
             setUrl(urlParam);
-            loadPreview(urlParam);
+            // Small delay to ensure state and console are ready
+            const timer = setTimeout(() => loadPreview(urlParam), 100);
+            return () => clearTimeout(timer);
         }
     }, [searchParams]);
 
@@ -57,6 +60,9 @@ const ExternalImport = () => {
     };
 
     const loadPreview = async (rawUrl) => {
+        if (!rawUrl) return;
+        console.log('Starting preview load for:', rawUrl);
+        
         try {
             // Basic sanity check — must look like an http URL
             const parsed = new URL(rawUrl);
@@ -68,29 +74,35 @@ const ExternalImport = () => {
             setImgStatus('loading');
             
             // Validate via backend to ensure it's a direct image
+            console.log('Validating with backend...');
             const { data } = await validateExternalUrl(rawUrl);
+            console.log('Backend reply:', data);
             
             if (data.valid) {
-                setOriginalUrl(rawUrl);
+                // The backend might have resolved the URL (e.g. Pin page -> direct image)
+                const resolvedUrl = data.url || rawUrl;
+                setOriginalUrl(resolvedUrl);
+                
                 // Use proxy URL for the preview to avoid CORS issues
-                const proxyUrl = getProxyUrl(rawUrl);
-                console.log('Setting Preview URL:', proxyUrl);
+                const proxyUrl = getProxyUrl(resolvedUrl);
+                console.log('Setting Preview Proxy URL:', proxyUrl);
                 setPreviewUrl(proxyUrl);
                 setCroppedUrl(null); // Reset crop on new url
                 // Note: setImgStatus('ok') will be called by img.onLoad
+            } else {
+                setImgStatus('error');
+                toast.error(data.error || 'This URL is not accessible');
             }
         } catch (err) {
             setImgStatus('error');
-            // Log the full error to help debugging
             console.error('Validation Error Details:', {
                 message: err.message,
                 code: err.code,
                 response: err.response?.data,
                 status: err.response?.status,
-                config: err.config // helpful for checking the URL used
+                url: rawUrl
             });
             
-            // Priority: Backend error message -> Network error description -> Generic fallback
             const errorMsg = err.response?.data?.error || 
                              (typeof err.response?.data === 'string' ? err.response.data : null) ||
                              (err.code === 'ERR_NETWORK' ? 'Network error: Backend might be offline or blocked by CORS.' : null) ||
