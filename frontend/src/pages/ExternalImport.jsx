@@ -81,11 +81,17 @@ const ExternalImport = () => {
         } catch (err) {
             setImgStatus('error');
             // Log the full error to help debugging
-            console.error('Validation Error:', err);
+            console.error('Validation Error Details:', {
+                message: err.message,
+                code: err.code,
+                response: err.response?.data,
+                status: err.response?.status,
+                config: err.config // helpful for checking the URL used
+            });
             
             // Priority: Backend error message -> Network error description -> Generic fallback
             const errorMsg = err.response?.data?.error || 
-                             err.response?.data || 
+                             (typeof err.response?.data === 'string' ? err.response.data : null) ||
                              (err.code === 'ERR_NETWORK' ? 'Network error: Backend might be offline or blocked by CORS.' : null) ||
                              'That doesn\'t look like a valid direct image URL';
                              
@@ -133,7 +139,7 @@ const ExternalImport = () => {
                 <ProductTypeModal
                     imageUrl={croppedUrl || originalUrl}
                     displayUrl={croppedUrl || previewUrl}
-                    imageSource={new URL(originalUrl).hostname}
+                    imageSource={originalUrl ? new URL(originalUrl).hostname : 'External'}
                     onClose={() => setShowTypeModal(false)}
                 />
             )}
