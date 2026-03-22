@@ -210,9 +210,13 @@ const ExternalImport = () => {
                     {previewUrl && (
                         <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="relative rounded-2xl overflow-hidden bg-gray-100 min-h-40 flex items-center justify-center">
-                                {imgStatus === 'loading' ? (
-                                    <Loader2 className="animate-spin text-gray-300" size={32} />
-                                ) : imgStatus === 'error' ? (
+                                {imgStatus === 'loading' && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50 backdrop-blur-[2px] z-10">
+                                        <Loader2 className="animate-spin text-blue-500" size={32} />
+                                    </div>
+                                )}
+                                
+                                {imgStatus === 'error' ? (
                                     <div className="py-14 flex flex-col items-center gap-3 text-gray-300 px-8 text-center text-xs">
                                         <ImageOff size={40} />
                                         <p className="font-bold text-gray-500">Can't display this image. Try "Copy image address" from the original source.</p>
@@ -221,14 +225,17 @@ const ExternalImport = () => {
                                     <img
                                         src={croppedUrl || previewUrl}
                                         alt="Preview"
-                                        className="w-full max-h-96 object-contain"
+                                        className={`w-full max-h-96 object-contain transition-opacity duration-300 ${imgStatus === 'ok' ? 'opacity-100' : 'opacity-0'}`}
                                         onLoad={() => setImgStatus('ok')}
-                                        onError={() => setImgStatus('error')}
+                                        onError={(e) => {
+                                            console.error('Image tag failed to load:', previewUrl);
+                                            setImgStatus('error');
+                                        }}
                                     />
                                 )}
 
                                 {imageReady && (
-                                    <div className="absolute top-3 left-3 bg-green-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                                    <div className="absolute top-3 left-3 bg-green-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5 z-20">
                                         <CheckCircle size={11} /> Image Ready {croppedUrl && "(Cropped)"}
                                     </div>
                                 )}
